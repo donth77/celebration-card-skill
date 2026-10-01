@@ -26,7 +26,7 @@ The card is a static folder (index.html + assets). Any static host works. Pick b
 
 When the user wants the card published, use the bundled script rather than hand-running CLIs. It:
 - stages a clean copy (no `qa/`, notes, `deploy.json` or dev tools)
-- never uploads private files: hidden files and folders (`.env`, `.git`, CLI state), key and credential files (`*.pem`, `*.key`, `id_rsa`…), or links that point outside the card folder. If it holds any back, the plan lists them under `private_files_not_uploaded`: mention that to the user
+- never uploads private files: hidden files and folders (`.env`, `.git`, CLI state), key and credential files (`*.pem`, `*.key`…), files with no extension, or links that point outside the card folder. If it holds any back, the plan lists them under `not_uploaded`: mention that to the user
 - writes absolute `og:url`/`og:image` for the final address
 - deploys and verifies the page, the preview image and audio seeking (HTTP 206) over HTTPS
 - records everything in `<card>/deploy.json`, so redeploying after edits is one command

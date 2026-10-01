@@ -10,8 +10,9 @@
 // --tap      click the gate first and report whether the audio clock runs (card.state())
 // --play-into expr:sec  play from expr for sec seconds, then snap (shows cue-driven bursts)
 // --desktop  also capture each time at 1440x900
-// Needs the `playwright` package (+ a Chromium): npm i -D playwright && npx playwright install chromium
-// It also finds a copy in the npx cache (e.g. one used by the Playwright MCP server).
+// --playwright <path>  use this installed copy of the `playwright` package
+// Needs the `playwright` package and its Chromium browser. It looks in the project first, then in
+// the npx cache (e.g. the copy the Playwright MCP server uses).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,7 +33,8 @@ fs.mkdirSync(outDir, { recursive: true });
 function loadPlaywright() {
   const req = createRequire(import.meta.url);
   const tries = [() => req('playwright'), () => req(path.join(process.cwd(), 'node_modules', 'playwright'))];
-  if (process.env.PLAYWRIGHT_PATH) tries.unshift(() => req(process.env.PLAYWRIGHT_PATH));
+  const given = opt('playwright', null);
+  if (given) tries.unshift(() => req(path.resolve(given)));
   const npx = path.join(os.homedir(), '.npm', '_npx');
   if (fs.existsSync(npx)) {
     const found = fs.readdirSync(npx).map((d) => path.join(npx, d, 'node_modules', 'playwright')).filter((p) => fs.existsSync(path.join(p, 'package.json')))
@@ -42,13 +44,13 @@ function loadPlaywright() {
     for (const f of found) tries.push(() => req(f.p));
   }
   for (const t of tries) { try { const m = t(); if (m?.chromium) return m; } catch { /* next */ } }
-  console.error('Playwright not found. Install it: npm i -D playwright && npx playwright install chromium');
+  console.error('Playwright not found. Add the playwright package and its Chromium browser to this project, or pass --playwright <path to an installed copy>.');
   process.exit(2);
 }
 
 const { chromium } = loadPlaywright();
 const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--autoplay-policy=no-user-gesture-required', '--ignore-gpu-blocklist'] })
-  .catch(async (e) => { console.error(String(e).split('\n')[0]); console.error('Try: npx playwright install chromium'); process.exit(3); });
+  .catch(async (e) => { console.error(String(e).split('\n')[0]); console.error("Playwright's Chromium browser is missing or out of date: download it with Playwright's own installer."); process.exit(3); });
 
 const report = { url, size: `${w}x${h}`, shots: [], consoleErrors: [], pageErrors: [], failedRequests: [] };
 

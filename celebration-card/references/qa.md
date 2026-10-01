@@ -29,7 +29,7 @@ node <skill>/scripts/snap.mjs http://localhost:8765/ --out <card>/qa --tap --des
   --times gate,start,intro+2bar,verse1+2bar,chorus1,bridge,chorus3+1bar,outro+1bar,end --play-into chorus3:3
 ```
 
-It writes phone (and, with `--desktop`, 1440×900) screenshots plus `qa-report.json`: card state, failed scenes, console errors, failed requests, and whether audio started after the tap. **Then open every PNG and look at it.** The script captures; you judge. It needs the `playwright` package; it finds one in the npx cache, or run `npm i -D playwright && npx playwright install chromium`.
+It writes phone (and, with `--desktop`, 1440×900) screenshots plus `qa-report.json`: card state, failed scenes, console errors, failed requests, and whether audio started after the tap. **Then open every PNG and look at it.** The script captures; you judge. It needs the `playwright` package and its Chromium browser. It looks in the project first, then in the npx cache (for example the copy the Playwright MCP server uses). If neither has one, add Playwright to the project, or point at an installed copy with `--playwright <path>`.
 
 **Interactive:** use whatever browser automation the environment has (Playwright MCP, Chrome DevTools MCP). It suits poking at interactions. If there's none, ask the user to open the page and report what they see.
 

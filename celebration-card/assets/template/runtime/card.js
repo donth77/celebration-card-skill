@@ -39,7 +39,7 @@ export function detectQuality(override) {
     medium: { name: 'medium', dpr: Math.min(window.devicePixelRatio || 1, 1.5), particles: 0.6, bloom: true },
     low: { name: 'low', dpr: 1, particles: 0.3, bloom: false },
   };
-  if (override && tiers[override]) return { ...tiers[override], tiers, locked: true }; // explicit = no auto-downgrade (deterministic QA)
+  if (override && tiers[override]) return { ...tiers[override], tiers, pinned: true }; // explicit = no auto-downgrade (deterministic QA)
   const mem = navigator.deviceMemory || 4;
   const cores = navigator.hardwareConcurrency || 4;
   const coarse = matchMedia('(pointer: coarse)').matches;
@@ -388,7 +388,7 @@ export async function createCard(config = {}) {
     fpsAcc += dt; fpsFrames++;
     if (fpsAcc >= 2) {
       ctx.fps = fpsFrames / fpsAcc;
-      if (started && ctx.fps < 38 && quality.name !== 'low' && !quality.locked) {
+      if (started && ctx.fps < 38 && quality.name !== 'low' && !quality.pinned) {
         if (++slowWindows >= 2) {
           const next = quality.name === 'high' ? 'medium' : 'low';
           Object.assign(quality, quality.tiers[next]);

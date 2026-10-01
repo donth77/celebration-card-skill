@@ -10,3 +10,8 @@ celebration-card-workspace/
 __pycache__/
 *.pyc
 node_modules/
+
+# Secrets: tokens and API keys stay out of the repo
+.env
+.env.*
+!.env.example

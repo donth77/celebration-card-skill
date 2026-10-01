@@ -22,7 +22,8 @@ verifies the page / preview image / audio seeking over HTTPS, and records the re
 <card>/deploy.json so later redeploys are one command.
 
 Never uploaded, whatever the card folder holds: hidden files and folders (.env, .git, CLI state),
-key and credential files, and links that point outside the card folder. The plan lists any it held back.
+key and credential files, files with no extension, and links that point outside the card folder.
+The plan lists any it held back under "not_uploaded".
 
 Publishing puts the sender's photos and words on a public URL — always show the plan to the user and
 get a yes before running with --yes. Tokens are only read from the environment, never passed as flags.
@@ -59,17 +60,23 @@ PLATFORMS = {
 }
 EXCLUDE_DIRS = {"qa", "node_modules", "__pycache__", "examples"}
 EXCLUDE_FILES = {"deploy.json", "song-preview.html", "preview.html", "Thumbs.db"}
-# Private files are never uploaded: anything hidden (dot-files and dot-folders), plus these.
+# Never uploaded: hidden files and folders, key and credential files, and files with no extension
+# (a web page never needs those, and bare private keys have none).
 PRIVATE_SUFFIXES = {".env", ".pem", ".key", ".p12", ".pfx", ".keystore", ".jks"}
 PRIVATE_NAMES = {"credentials.json", "secrets.json", "token.json"}
-PRIVATE_PREFIXES = ("id_rsa", "id_ed25519", "id_ecdsa", "id_dsa")
+PLAIN_NAMES_OK = {"_headers", "_redirects", "CNAME"}  # host config files that legitimately have no extension
 QUIET_HIDDEN = {".DS_Store", ".gitkeep", ".git"}  # expected clutter: skipped without a mention in the plan
 
 
-def is_private(rel):
-    name = rel.name.lower()
-    return (any(part.startswith(".") for part in rel.parts) or rel.suffix.lower() in PRIVATE_SUFFIXES
-            or name in PRIVATE_NAMES or name.startswith(PRIVATE_PREFIXES))
+def why_private(rel):
+    """Reason a file must not be published, or None if it is fine to upload."""
+    if any(part.startswith(".") for part in rel.parts):
+        return "hidden"
+    if rel.suffix.lower() in PRIVATE_SUFFIXES or rel.name.lower() in PRIVATE_NAMES:
+        return "key or credential file"
+    if not rel.suffix and rel.name not in PLAIN_NAMES_OK:
+        return "no file extension"
+    return None
 
 
 def slugify(s):
@@ -98,28 +105,26 @@ def logged_in(platform, env):
     return ok, ("logged in via CLI" if ok else "not logged in")
 
 
-def stage(card, name, include_md):
-    """Copy what gets published into a temp folder. Returns (folder, private files that were held back)."""
-    root = Path(tempfile.mkdtemp(prefix="card-deploy-")) / name
+def stage(card, name, include_md, tmp):
+    """Copy what gets published into tmp/<name>. Returns (folder, files that were held back as private)."""
+    root = Path(tmp) / name
     uses_music = "music/" in (card / "main.js").read_text(errors="ignore") if (card / "main.js").exists() else True
     held_back = []
     for src in card.rglob("*"):
         rel = src.relative_to(card)
-        if any(part in EXCLUDE_DIRS for part in rel.parts[:-1]) or src.name in EXCLUDE_FILES:
+        if src.is_dir() or any(part in EXCLUDE_DIRS for part in rel.parts[:-1]) or src.name in EXCLUDE_FILES:
             continue
-        if is_private(rel):
-            if not any(part in QUIET_HIDDEN for part in rel.parts) and not src.is_dir():
-                held_back.append(rel.as_posix())
-            continue
-        if src.is_symlink() and not src.resolve().is_relative_to(card):
-            held_back.append(f"{rel.as_posix()} (link to a file outside the card folder)")
+        reason = why_private(rel)
+        if reason is None and src.is_symlink() and not src.resolve().is_relative_to(card):
+            reason = "link to a file outside the card folder"
+        if reason:
+            if not any(part in QUIET_HIDDEN for part in rel.parts):
+                held_back.append(f"{rel.as_posix()} ({reason})")
             continue
         if not uses_music and rel.parts and rel.parts[0] == "music":
             continue  # the score isn't loaded by this card (file-audio route)
         if src.suffix.lower() == ".md" and not include_md:
             continue  # README / CREDITS / suno-prompt are for the sender, not the recipient
-        if src.is_dir():
-            continue
         dst = root / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
@@ -256,9 +261,13 @@ def main():
     team = args.team or cfg.get("team") or (user_defaults.get("team") if platform == user_defaults.get("platform") else None)
     spec = PLATFORMS[platform]
     expected = spec["url"].format(name=name) if spec["url"] else "(assigned by Netlify)"
+    with tempfile.TemporaryDirectory(prefix="card-deploy-") as tmp:  # staging copy: removed however this ends
+        publish(args, card, cfg, cfg_path, platform, name, team, spec, expected, tmp)
 
+
+def publish(args, card, cfg, cfg_path, platform, name, team, spec, expected, tmp):
     env = dict(os.environ)
-    staged, held_back = stage(card, name, args.include_md)
+    staged, held_back = stage(card, name, args.include_md, tmp)
     files = [p for p in staged.rglob("*") if p.is_file()]
     total = sum(p.stat().st_size for p in files)
     too_big = [f"{p.relative_to(staged)} ({p.stat().st_size / 1e6:.1f} MB)" for p in files if p.stat().st_size > spec["file_limit"]]
@@ -269,13 +278,11 @@ def main():
         "platform": platform, "name": name, "url": expected, "team": team, "files": len(files),
         "size_mb": round(total / 1e6, 1), "auth": auth_note if auth_ok else f"NOT READY — {auth_note}",
         "excluded": "qa/, *.md (README, CREDITS, suno-prompt), deploy.json, music/examples, song-preview.html, hidden files" + ("" if (staged / "music").exists() else ", music/ (not used)"),
-        **({"private_files_not_uploaded": held_back} if held_back else {}),
+        **({"not_uploaded": held_back} if held_back else {}),
         "link_preview": ("password-protected: previews won't unfurl" if platform == "netlify-anon"
                          else "og:url + og:image set to the live address" if has_og else "no og.jpg — previews will show without an image"),
     }
     print(json.dumps({"plan": plan}, indent=2, ensure_ascii=False))
-    if not args.yes or too_big or not auth_ok:
-        shutil.rmtree(staged.parent, ignore_errors=True)  # nothing will be published: drop the staging copy
     if too_big:
         sys.exit(f"Files over the {spec['file_limit'] // 1024 // 1024} MB per-file limit for {platform}: {too_big}. Compress them first (prepare_media.py --video-max 960).")
     if not auth_ok:
@@ -303,7 +310,6 @@ def main():
     record = {"platform": platform, "name": name, "team": team, "url": url, "deployedAt": datetime.now().isoformat(timespec="seconds"),
               "checks": checks, "info": info, "history": (cfg.get("history", []) + [{"url": url, "at": datetime.now().isoformat(timespec="seconds")}])[-10:]}
     cfg_path.write_text(json.dumps(record, indent=2))
-    shutil.rmtree(staged.parent, ignore_errors=True)
     print(json.dumps({"published": url, "checks": checks, "info": info or None, "recorded": str(cfg_path)}, indent=2, ensure_ascii=False))
     bad = {k: v for k, v in checks.items() if not (200 <= v < 300)}
     if bad:

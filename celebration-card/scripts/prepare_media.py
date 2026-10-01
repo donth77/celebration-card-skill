@@ -27,7 +27,7 @@ from pathlib import Path
 try:
     from PIL import Image, ImageOps
 except ImportError:
-    sys.exit("Pillow is required: python3 -m pip install Pillow")
+    sys.exit("The Pillow package (Python imaging) is required. Install it with pip and run this again.")
 
 try:  # optional HEIC support
     import pillow_heif  # type: ignore
@@ -56,18 +56,21 @@ def collect(inputs):
 def open_image(path):
     """Open an image, converting HEIC via sips/magick when Pillow can't read it."""
     try:
-        return Image.open(path), None
+        return Image.open(path)
     except Exception:
         if path.suffix.lower() not in {".heic", ".heif"}:
             raise
-    tmp = Path(tempfile.mkdtemp()) / (path.stem + ".jpg")
-    if shutil.which("sips"):
-        subprocess.run(["sips", "-s", "format", "jpeg", str(path), "--out", str(tmp)], check=True, capture_output=True)
-    elif shutil.which("magick"):
-        subprocess.run(["magick", str(path), str(tmp)], check=True, capture_output=True)
-    else:
-        raise RuntimeError("HEIC needs pillow-heif (pip install pillow-heif), macOS sips, or ImageMagick")
-    return Image.open(tmp), tmp
+    with tempfile.TemporaryDirectory() as tmp:  # holds the converted JPEG; removed once it has been read
+        jpg = Path(tmp) / (path.stem + ".jpg")
+        if shutil.which("sips"):
+            subprocess.run(["sips", "-s", "format", "jpeg", str(path), "--out", str(jpg)], check=True, capture_output=True)
+        elif shutil.which("magick"):
+            subprocess.run(["magick", str(path), str(jpg)], check=True, capture_output=True)
+        else:
+            raise RuntimeError("HEIC needs the pillow-heif package, macOS sips, or ImageMagick")
+        img = Image.open(jpg)
+        img.load()  # read it fully now: the file goes away with the temporary folder
+        return img
 
 
 def exif_date(img):
@@ -125,7 +128,7 @@ def luminance(img):
 
 
 def process_image(src, out_dir, idx, args):
-    img, tmp = open_image(src)
+    img = open_image(src)
     date = exif_date(img)
     gps = has_gps(img)
     credit = credit_info(img)
@@ -141,8 +144,6 @@ def process_image(src, out_dir, idx, args):
     (out_dir / "thumbs").mkdir(exist_ok=True)
     thumb.save(out_dir / "thumbs" / name, "WEBP", quality=78, method=6)
     w, h = img.size
-    if tmp:
-        shutil.rmtree(tmp.parent, ignore_errors=True)
     return {
         "type": "image", "src": f"{args.prefix}{name}", "thumb": f"{args.prefix}thumbs/{name}",
         "w": w, "h": h, "aspect": round(w / h, 4),

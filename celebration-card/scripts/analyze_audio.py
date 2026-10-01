@@ -40,16 +40,15 @@ def load_audio(path):
         if r.returncode == 0 and r.stdout:
             return np.frombuffer(r.stdout, dtype=np.float32).copy()
     wav = path
-    tmp = None
-    if path.suffix.lower() != ".wav":
-        if not shutil.which("afconvert"):
-            sys.exit("Need ffmpeg (or macOS afconvert) to decode this file. brew install ffmpeg / apt install ffmpeg")
-        tmp = Path(tempfile.mkdtemp()) / "a.wav"
-        subprocess.run(["afconvert", "-f", "WAVE", "-d", f"LEI16@{SR}", "-c", "1", str(path), str(tmp)], check=True)
-        wav = tmp
-    with wave.open(str(wav)) as w:
-        n, ch, sw, sr = w.getnframes(), w.getnchannels(), w.getsampwidth(), w.getframerate()
-        raw = w.readframes(n)
+    with tempfile.TemporaryDirectory() as tmp:  # holds the converted WAV; removed as soon as it has been read
+        if path.suffix.lower() != ".wav":
+            if not shutil.which("afconvert"):
+                sys.exit("Need ffmpeg (or macOS afconvert) to decode this file. Install ffmpeg (Homebrew or apt) and run this again.")
+            wav = Path(tmp) / "a.wav"
+            subprocess.run(["afconvert", "-f", "WAVE", "-d", f"LEI16@{SR}", "-c", "1", str(path), str(wav)], check=True)
+        with wave.open(str(wav)) as w:
+            n, ch, sw, sr = w.getnframes(), w.getnchannels(), w.getsampwidth(), w.getframerate()
+            raw = w.readframes(n)
     dt = {1: np.int8, 2: np.int16, 4: np.int32}[sw]
     y = np.frombuffer(raw, dtype=dt).astype(np.float32) / float(np.iinfo(dt).max)
     if ch > 1:
@@ -57,8 +56,6 @@ def load_audio(path):
     if sr != SR:
         idx = np.arange(0, len(y), sr / SR)
         y = np.interp(idx, np.arange(len(y)), y).astype(np.float32)
-    if tmp:
-        shutil.rmtree(tmp.parent, ignore_errors=True)
     return y
 
 
