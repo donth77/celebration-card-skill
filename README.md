@@ -1,4 +1,8 @@
-# Celebration Card Skill
+<p align="center">
+  <img src="assets/logo.svg" width="128" alt="Celebration Card Skill logo: a party popper firing a play button">
+</p>
+
+<h1 align="center">Celebration Card Skill</h1>
 
 A Claude Code skill that makes interactive celebration cards: short websites with music,
 animation and photos that you send as a link. Use it for birthdays, retirements, anniversaries,
@@ -102,6 +106,7 @@ open the card, so share it like you would a photo album.
 
 - `celebration-card/`: the skill itself: instructions, scripts and the card template
 - `celebration-card/evals/`: test requests used while building the skill
+- `assets/`: the logo at the top of this page
 
 To try the demo card: run `python3 celebration-card/scripts/serve.py celebration-card/assets/template`,
 then open http://localhost:8765 with the sound on.
