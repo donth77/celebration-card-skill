@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- Link previews (iMessage, WhatsApp, Slack…) don't run JavaScript: keep these tags static and
+       early in <head>. After deploying, make og:image and og:url ABSOLUTE https URLs.
+       Keep the preview a teaser, not a spoiler. -->
+  <title>For Alex 💌</title>
+  <meta name="description" content="Someone made you something. Tap to open — sound on." />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#120a24" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="For Alex 💌" />
+  <meta property="og:description" content="Someone made you something. Tap to open — sound on." />
+  <meta property="og:image" content="og.jpg" />
+  <meta property="og:url" content="" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>💌</text></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&family=Inter:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Pinned library versions. Only the modules a card actually imports are downloaded.
+       three → jsDelivr's minified single-file bundle (~190 KB gzipped vs ~420 KB unminified). -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/+esm",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+      "tone": "https://cdn.jsdelivr.net/npm/tone@15.1.22/+esm"
+    }
+  }
+  </script>
+  <script>if (location.protocol === 'file:') document.documentElement.classList.add('is-file');</script>
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <canvas id="gl" aria-hidden="true"></canvas>
+  <main id="stage"></main>
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <!-- The gate: first impression + the tap that unlocks sound. Restyle it for each card's concept. -->
+  <section id="gate" class="is-loading" aria-label="A card for you">
+    <div class="envelope">
+      <div class="envelope__back"></div>
+      <div class="envelope__letter"><span data-bind="gate.letter">Happy Birthday</span></div>
+      <div class="envelope__front"></div>
+      <div class="envelope__flap"></div>
+      <button class="envelope__seal" data-open disabled aria-label="Open your card"><span data-bind="gate.seal">A</span></button>
+    </div>
+    <p class="gate__to" data-bind="gate.to">For Alex</p>
+    <p class="gate__hint"><span class="gate__ready">Tap to open · sound on 🔊</span><span class="gate__loading">Getting things ready…</span></p>
+    <div class="gate__progress" aria-hidden="true"></div>
+  </section>
+
+  <!-- Keepsake: the letter (shown during the outro) + gallery, replay and credits once the show ends. -->
+  <section id="keepsake" hidden aria-label="Your card">
+    <div class="keepsake__inner">
+      <article class="letter" data-letter></article>
+      <div class="keepsake__more">
+        <div class="keepsake__gallery" data-gallery></div>
+        <div class="keepsake__actions">
+          <button class="btn" data-replay type="button">↺ Play it again</button>
+          <a class="btn btn--ghost" data-reply hidden>Reply 💬</a>
+        </div>
+        <footer class="credits" data-credits></footer>
+      </div>
+    </div>
+  </section>
+
+  <div id="ui">
+    <button class="pill" data-resume hidden type="button">🔊 Tap for sound</button>
+    <button class="icon-btn" data-mute aria-pressed="false" aria-label="Mute sound" type="button">
+      <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>
+      <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>
+    </button>
+  </div>
+
+  <div class="file-warning">This card has to be opened through a web server, not as a file. In this folder run <code>python3 -m http.server 8000</code> and open <code>http://localhost:8000</code>.</div>
+  <noscript><p style="padding:24px">This card needs JavaScript turned on.</p></noscript>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

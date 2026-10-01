@@ -1,0 +1,12 @@
+# Local editor/agent settings and browser-tool output
+.claude/
+.playwright-mcp/
+
+# Test runs from developing the skill (large, local only)
+celebration-card-workspace/
+
+# OS, Python, Node
+.DS_Store
+__pycache__/
+*.pyc
+node_modules/

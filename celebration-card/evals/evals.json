@@ -1,0 +1,26 @@
+{
+  "skill_name": "celebration-card",
+  "evals": [
+    {
+      "id": 1,
+      "name": "retirement-no-photos",
+      "prompt": "My dad Bob Kowalski is retiring in two weeks after 34 years teaching high school chemistry at Lincoln High. I want to send him a website card — no photos, I want it all custom animation, go big with 3D and effects. He's obsessed with fly fishing and he's the king of terrible chemistry puns (his all-time favorite: \"I'd tell you a chemistry joke but I know I wouldn't get a reaction\"). For music just make something yourself — upbeat, a bit of a celebration. It's from me (Dana) and my brother Luis. Put it in ./bob-retirement",
+      "expected_output": "A static card site with no photo assets: custom 3D + effects themed on chemistry and fly fishing, Claude-synthesized upbeat music with visuals synced to its sections/beats, an interactive moment, a closing message from Dana & Luis, and an end screen.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "anniversary-suno-first",
+      "prompt": "Our 10th wedding anniversary is Oct 18 and I want to surprise my wife Priya (it's pronounced PREE-yah) with a website and a custom song with her name in it. Write me the Suno prompt first and then build the site around the song. Some details: we met at a hackathon in Austin in 2014 (our team lost spectacularly), our beagle Momo has eaten two of my shoes, she loves monsoon rain and masala chai, and we just got back from Lisbon. Romantic but a little playful please. I don't have any photos handy. Save it to ./priya-10",
+      "expected_output": "suno-prompt.md written first (title, styles without artist names, structured lyrics with Priya's name in the chorus and the personal details, settings, phonetic name handling, how-to steps), then a card built against the prompt's planned structure that runs before the song exists, with instructions for dropping in the MP3 and re-syncing.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "birthday-user-song-and-photos",
+      "prompt": "It's my best friend Jules's 40th on Saturday!! Attached is the song we always end up dancing to at every party (song.mp3 — an old 1920s recording of \"Ain't We Got Fun\") and a few photos from our trips (photos/ folder). Build a birthday card website that's synced to the song — I want the big moments to hit with the music. From me, Sam. Put the card in ./jules-40",
+      "expected_output": "A card that uses the provided song, analyzed for tempo/beats/sections, with scenes and big moments anchored to the measured timing; the photos prepared (resized, metadata stripped) and captioned from what they show; credits for the PD recording; end screen.",
+      "files": ["evals/files/jules-40/song.mp3", "evals/files/jules-40/photos/"]
+    }
+  ]
+}

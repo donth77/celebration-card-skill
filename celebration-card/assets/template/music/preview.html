@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Song preview</title>
+  <meta name="robots" content="noindex" />
+  <!-- Dev tool: render a synthesized song offline, listen, check levels, download a WAV.
+       Open /music/preview.html?song=song.js (or examples/fanfare.js). Not part of the card.
+       Offline rendering takes roughly 1–2× the song's length; add &rate=22050 for a faster draft
+       check (export the final WAV at the default 44100). -->
+  <script type="importmap">{ "imports": { "tone": "https://cdn.jsdelivr.net/npm/tone@15.1.22/+esm" } }</script>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; max-width: 760px; color: #222; background: #fafafa; }
+    button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
+    pre { background: #fff; border: 1px solid #ddd; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
+    audio { width: 100%; margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <h1>Song preview</h1>
+  <p><label>Song module: <input id="mod" size="40" /></label> <button id="go">Render</button></p>
+  <audio id="player" controls></audio>
+  <p><a id="dl" download="song.wav" hidden>Download WAV</a></p>
+  <pre id="out">…</pre>
+  <script type="module">
+    import { song as normalise, renderSongToWav } from './music.js';
+    const out = document.getElementById('out');
+    const params = new URLSearchParams(location.search);
+    const input = document.getElementById('mod');
+    input.value = params.get('song') || 'song.js';
+    const warnings = [];
+    const warn = console.warn.bind(console);
+    console.warn = (...a) => { warnings.push(a.join(' ')); warn(...a); };
+    async function run() {
+      warnings.length = 0;
+      out.textContent = 'Rendering…';
+      const t0 = performance.now();
+      try {
+        const mod = await import(`./${input.value}?v=${Date.now()}`);
+        const S = mod.default._isSong ? mod.default : normalise(mod.default);
+        const wav = await renderSongToWav(S, { sampleRate: Number(params.get('rate')) || 44100 });
+        const buf = await new AudioContext().decodeAudioData(await wav.arrayBuffer());
+        let peak = 0, sum = 0, n = 0, clipped = 0;
+        for (let c = 0; c < buf.numberOfChannels; c++) {
+          const d = buf.getChannelData(c);
+          for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); peak = Math.max(peak, v); sum += v * v; n++; if (v > 0.999) clipped++; }
+        }
+        const db = (x) => (20 * Math.log10(x || 1e-9)).toFixed(1);
+        const url = URL.createObjectURL(wav);
+        document.getElementById('player').src = url;
+        const dl = document.getElementById('dl'); dl.href = url; dl.hidden = false;
+        const report = {
+          title: S.title, bpm: S.bpm, meter: S.meter, duration: +S.timing.duration.toFixed(2),
+          sections: S.timing.sections.map((s) => `${s.name} ${s.start.toFixed(2)}–${s.end.toFixed(2)}`),
+          peakDb: +db(peak), rmsDb: +db(Math.sqrt(sum / n)), clippedSamples: clipped,
+          renderSeconds: +((performance.now() - t0) / 1000).toFixed(1), warnings,
+        };
+        window.previewReport = report;
+        out.textContent = JSON.stringify(report, null, 2);
+      } catch (e) {
+        window.previewReport = { error: String(e.stack || e), warnings };
+        out.textContent = 'Error: ' + (e.stack || e);
+      }
+    }
+    document.getElementById('go').onclick = run;
+    run();
+  </script>
+</body>
+</html>

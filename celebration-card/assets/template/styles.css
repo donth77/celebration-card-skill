@@ -1,0 +1,195 @@
+/* ==========================================================================
+   Celebration card — base styles
+   Theme lives in the tokens below. Canvas effects read --c-* too (readPalette),
+   so change colours here and everything follows.
+   ========================================================================== */
+:root {
+  --c-bg: #120a24;
+  --c-bg-2: #2a1450;
+  --c-ink: #fff6ea;
+  --c-muted: #cbbfe6;
+  --c-accent: #ffc857;
+  --c-accent-2: #ff6b9a;
+  --c-accent-3: #7ae7ff;
+  --c-accent-4: #b48cff;
+  --c-paper: #fffaf1;
+  --c-paper-ink: #2c2433;
+
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-hand: 'Caveat', 'Bradley Hand', 'Segoe Print', cursive;
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --gutter: clamp(16px, 5vw, 48px);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; } /* author display rules must never un-hide things */
+html, body { margin: 0; height: 100%; background: var(--c-bg); color: var(--c-ink); }
+body {
+  font-family: var(--font-body);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+button { font: inherit; color: inherit; }
+
+/* ---------- layers: background shader → 3D → DOM scenes → 2D effects → UI ---------- */
+#bg, #gl, #fx { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#bg { z-index: 0; }
+#gl { z-index: 1; pointer-events: none; opacity: 0; } /* scenes set opacity each frame */
+#stage { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+#stage .is-interactive { pointer-events: auto; }
+#fx { z-index: 3; pointer-events: none; }
+#ui { position: fixed; z-index: 20; top: calc(var(--safe-t) + 12px); right: 12px; display: flex; gap: 8px; align-items: center; }
+
+/* A scene is a full-screen box; scenes show/hide themselves. */
+.scene {
+  position: absolute; inset: 0;
+  display: grid; place-items: center; align-content: center;
+  padding: calc(var(--safe-t) + 24px) var(--gutter) calc(var(--safe-b) + 24px);
+  text-align: center;
+}
+.scene[hidden] { display: none; }
+
+/* ---------- type ---------- */
+.kicker { font-family: var(--font-body); font-weight: 600; letter-spacing: .22em; text-transform: uppercase; font-size: clamp(12px, 3.2vw, 15px); color: var(--c-muted); margin: 0 0 1.2em; }
+.display { font-family: var(--font-display); font-weight: 800; line-height: .92; letter-spacing: -.02em; margin: 0; font-variation-settings: 'SOFT' 100, 'WONK' 1; text-wrap: balance; }
+h1, h2, h3, p { text-wrap: pretty; }
+.display--xl { font-size: clamp(56px, 17vw, 190px); }
+.display--l { font-size: clamp(40px, 11vw, 120px); }
+.hand { font-family: var(--font-hand); font-weight: 600; }
+.glow { text-shadow: 0 0 .35em color-mix(in srgb, var(--c-accent) 55%, transparent), 0 .04em .2em rgba(0,0,0,.35); }
+.sp { will-change: transform, opacity; }
+
+/* ---------- gate (the envelope) ---------- */
+#gate {
+  position: fixed; inset: 0; z-index: 10;
+  display: grid; place-items: center; align-content: center; gap: 22px;
+  background: radial-gradient(120% 90% at 50% 35%, var(--c-bg-2), var(--c-bg) 70%);
+  transition: opacity .9s ease .5s, visibility 0s linear 1.4s;
+}
+#gate.is-opening { opacity: 0; visibility: hidden; }
+#gate.is-gone { display: none; }
+.envelope { position: relative; width: min(78vw, 360px); aspect-ratio: 1.45; perspective: 900px; }
+.envelope > * { position: absolute; inset: 0; border-radius: 10px; }
+.envelope__back { background: color-mix(in srgb, var(--c-accent-2) 70%, #000 30%); }
+.envelope__letter {
+  inset: 8% 7% 12%; background: var(--c-paper); color: var(--c-paper-ink); border-radius: 6px;
+  display: grid; place-items: start center; padding-top: 14%;
+  font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, 4.6vw, 22px);
+  transition: transform 1s var(--ease-out) .25s;
+}
+.envelope__front {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c-accent-2) 92%, #fff 8%), var(--c-accent-2));
+  clip-path: polygon(0 0, 50% 62%, 100% 0, 100% 100%, 0 100%);
+  box-shadow: 0 20px 50px rgba(0,0,0,.45);
+}
+.envelope__flap {
+  background: color-mix(in srgb, var(--c-accent-2) 80%, #000 20%);
+  clip-path: polygon(0 0, 100% 0, 50% 62%);
+  transform-origin: 50% 0; transition: transform .7s var(--ease-out);
+  z-index: 2;
+}
+.envelope__seal {
+  inset: auto; left: 50%; top: 52%; width: 64px; height: 64px; translate: -50% -50%;
+  border-radius: 50%; border: 0; z-index: 3; cursor: pointer;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c-accent) 85%, #fff), var(--c-accent) 55%, color-mix(in srgb, var(--c-accent) 70%, #000));
+  color: color-mix(in srgb, var(--c-accent) 35%, #000); font-family: var(--font-display); font-weight: 900; font-size: 28px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.35), inset 0 -3px 6px rgba(0,0,0,.18);
+  transition: transform .4s var(--ease-out), opacity .3s ease;
+}
+#gate.is-ready .envelope__seal { animation: seal-pulse 2.2s ease-in-out infinite; }
+.envelope__seal:disabled { cursor: progress; opacity: .7; }
+.envelope__seal:focus-visible { outline: 3px solid var(--c-ink); outline-offset: 4px; }
+#gate.is-opening .envelope__seal { transform: scale(.4); opacity: 0; }
+#gate.is-opening .envelope__flap { transform: rotateX(180deg); z-index: 0; }
+#gate.is-opening .envelope__letter { transform: translateY(-46%); }
+@keyframes seal-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.gate__to { margin: 0; font-family: var(--font-hand); font-size: clamp(26px, 7vw, 36px); color: var(--c-ink); }
+.gate__hint { margin: 0; font-size: 14px; color: var(--c-muted); letter-spacing: .04em; min-height: 1.4em; }
+.gate__ready { display: none; }
+#gate.is-ready .gate__ready { display: inline; }
+#gate.is-ready .gate__loading { display: none; }
+.gate__progress { width: 120px; height: 2px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; }
+.gate__progress::after { content: ''; display: block; height: 100%; width: calc(var(--progress, 0) * 100%); background: var(--c-accent); transition: width .3s ease; }
+#gate.is-ready .gate__progress { opacity: 0; transition: opacity .4s; }
+/* The whole envelope is tappable */
+#gate { cursor: pointer; }
+
+/* ---------- UI ---------- */
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(10,6,20,.38); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .6s ease; }
+.is-open .icon-btn { opacity: .8; }
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn .off { display: none; }
+.icon-btn[aria-pressed='true'] .on { display: none; }
+.icon-btn[aria-pressed='true'] .off { display: block; }
+.pill { border: 0; border-radius: 999px; padding: 10px 16px; background: var(--c-ink); color: var(--c-bg); font-weight: 600; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+.hint { position: absolute; left: 50%; bottom: calc(var(--safe-b) + 28px); translate: -50% 0; font-size: 14px; letter-spacing: .06em; color: var(--c-muted); white-space: nowrap; }
+
+/* ---------- keepsake (end screen) ---------- */
+#keepsake { position: fixed; inset: 0; z-index: 6; overflow-y: auto; -webkit-overflow-scrolling: touch; pointer-events: none; }
+#keepsake.is-visible { pointer-events: auto; }
+.keepsake__inner { min-height: 100%; display: grid; justify-items: center; align-content: start; gap: 28px; padding: calc(var(--safe-t) + 9vh) var(--gutter) calc(var(--safe-b) + 48px); }
+.keepsake__more { display: grid; justify-items: center; gap: 28px; width: 100%; opacity: 0; transform: translateY(16px); transition: opacity .9s ease .4s, transform .9s var(--ease-out) .4s; }
+#keepsake.is-visible .keepsake__more { opacity: 1; transform: none; }
+.letter {
+  width: min(100%, 560px); background: var(--c-paper); color: var(--c-paper-ink);
+  border-radius: 14px; padding: clamp(24px, 6vw, 44px); text-align: left;
+  box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 2px 0 rgba(255,255,255,.6) inset;
+  font-size: clamp(17px, 4.4vw, 19px); line-height: 1.6;
+  transform-origin: 50% 100%;
+}
+.letter h2 { font-family: var(--font-hand); font-size: clamp(32px, 8vw, 42px); font-weight: 700; margin: 0 0 .4em; line-height: 1.1; }
+.letter p { margin: 0 0 1em; }
+.letter .signoff { margin: 1.4em 0 0; }
+.letter .signature { font-family: var(--font-hand); font-size: clamp(30px, 8vw, 40px); line-height: 1; margin: .1em 0 0; }
+.keepsake__gallery { width: min(100%, 720px); display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.keepsake__gallery button { padding: 0; border: 0; border-radius: 8px; overflow: hidden; aspect-ratio: 1; cursor: zoom-in; background: rgba(255,255,255,.06); }
+.keepsake__gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.keepsake__actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.btn { border: 0; border-radius: 999px; padding: 14px 22px; min-height: 48px; background: var(--c-accent); color: #1a1208; font-weight: 600; font-size: 16px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+.btn--ghost { background: transparent; color: var(--c-ink); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+.credits { font-size: 12px; color: var(--c-muted); opacity: .75; text-align: center; max-width: 560px; line-height: 1.5; }
+.credits a { color: inherit; }
+.lightbox { position: fixed; inset: 0; z-index: 30; background: rgba(5,3,10,.92); display: grid; place-items: center; padding: var(--gutter); }
+.lightbox img { max-width: 100%; max-height: 80vh; border-radius: 8px; }
+.lightbox figcaption { margin-top: 12px; text-align: center; font-family: var(--font-hand); font-size: 26px; }
+
+/* ---------- example scene: wish (3D cake) ---------- */
+.scene--wish { align-content: end; padding-bottom: calc(var(--safe-b) + 8vh); }
+.wish__prompt { display: grid; justify-items: center; gap: 14px; }
+.wish__title { font-size: clamp(34px, 9.5vw, 68px); }
+.wish__sub { margin: 0; font-size: 14px; color: var(--c-muted); letter-spacing: .02em; }
+.wish__btn { font-size: 17px; padding: 14px 22px; min-height: 48px; }
+.wish__done { position: absolute; left: var(--gutter); right: var(--gutter); top: calc(var(--safe-t) + 14vh); font-size: clamp(38px, 11vw, 80px); opacity: 0; }
+
+/* ---------- lyric captions (fx/lyrics.js) ---------- */
+.lyrics { position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(var(--safe-b) + 76px); margin: 0; text-align: center;
+  font-family: var(--font-hand); font-size: clamp(21px, 5.6vw, 32px); line-height: 1.2; color: var(--c-ink); opacity: 0;
+  text-shadow: 0 2px 14px rgba(0,0,0,.55); text-wrap: balance; pointer-events: none; }
+.lyrics span { opacity: .55; transition: opacity .12s linear; }
+.lyrics span.is-sung { opacity: 1; }
+
+/* ---------- photos (DOM) ---------- */
+.photo { margin: 0; overflow: hidden; border-radius: 6px; }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; will-change: transform; }
+.slideshow { position: relative; width: min(88vw, 520px); aspect-ratio: 4 / 5; }
+.slideshow .slide { position: absolute; inset: 0; }
+.slideshow figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 16px 14px; font-family: var(--font-hand); font-size: 26px; background: linear-gradient(transparent, rgba(0,0,0,.55)); }
+.polaroid { background: var(--c-paper); padding: 10px 10px 48px; border-radius: 3px; box-shadow: 0 18px 40px rgba(0,0,0,.4); }
+.polaroid figcaption { color: var(--c-paper-ink); font-family: var(--font-hand); font-size: 24px; text-align: center; margin-top: 8px; }
+
+/* ---------- helpers ---------- */
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.file-warning, html.is-file .file-warning { display: none; }
+html.is-file .file-warning { display: block; position: fixed; inset: auto 12px 12px; z-index: 99; background: #fff; color: #111; padding: 14px 16px; border-radius: 10px; font: 14px/1.45 system-ui, sans-serif; }
+@media (prefers-reduced-motion: reduce) {
+  #gate.is-ready .envelope__seal { animation: none; }
+  .envelope__flap, .envelope__letter { transition-duration: .01s; }
+}
