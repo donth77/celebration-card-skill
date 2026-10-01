@@ -2,8 +2,8 @@
 // Pattern: build DOM in init, show/hide in enter/exit, animate purely from s.t in update,
 // and anchor key moments to the music with ctx.at('section+Nbar').
 
-import { splitText, revealSpans, fitText } from '../fx/text.js';
-import { seg, ease } from '../runtime/anim.js';
+import { splitText, revealSpans, fitText } from 'card/fx/text.js';
+import { seg, ease } from 'card/runtime/anim.js';
 
 export const opening = {
   init(ctx) {

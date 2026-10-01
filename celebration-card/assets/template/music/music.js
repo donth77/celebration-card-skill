@@ -26,8 +26,8 @@
 // See references/synth-music.md for presets, arrangement recipes and complete example songs.
 
 import * as Tone from 'tone';
-import { Timing } from '../runtime/timing.js';
-import { setPlaybackAudioSession } from '../runtime/clock.js';
+import { Timing } from 'card/runtime/timing.js';
+import { setPlaybackAudioSession } from 'card/runtime/clock.js';
 
 // =============================================================== pitch & chord parsing
 const PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };

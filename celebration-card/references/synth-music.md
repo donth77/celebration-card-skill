@@ -123,7 +123,7 @@ Mixing starting points:
 | kit | −12 to −15 dB | |
 | doubles (glock an octave up) | −18 to −20 dB | |
 
-Pan the doubles opposite the chords. The master compressor/limiter glues it together. If anything clips, `music/preview.html` reports it.
+Pan the doubles opposite the chords. The master compressor/limiter glues it together. If anything clips, `song-preview.html` reports it.
 
 ## Composing: recipes by mood
 
@@ -198,7 +198,7 @@ Tested, runnable starting points in `music/examples/`. Copy one to `music/song.j
 
 ## Checking and exporting
 
-- **Listen and measure:** serve the card and open `/music/preview.html?song=song.js` (or `examples/fanfare.js`). Offline rendering takes roughly 1–2× the song's length, so add `&rate=22050` for a faster draft check. It renders offline, plays the result, and reports duration, section times, peak/RMS dB, clipped samples and notation warnings. Aim for:
+- **Listen and measure:** serve the card and open `/song-preview.html?song=song.js` (or `?song=examples/fanfare.js`; the name is a file in `music/`). Offline rendering takes roughly 1–2× the song's length, so add `&rate=22050` for a faster draft check. It renders offline, plays the result, and reports duration, section times, peak/RMS dB, clipped samples and notation warnings. Aim for:
   | Measure | Target |
   |---|---|
   | clipped samples | 0 |

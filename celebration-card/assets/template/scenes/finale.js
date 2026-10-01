@@ -1,8 +1,8 @@
 // EXAMPLE SCENE — the climax: big number on the downbeat, words on the next bar, and an
 // interactive sky (tap to launch fireworks). Confetti/firework *bursts* are cues in main.js.
 
-import { splitText, revealSpans, fitText } from '../fx/text.js';
-import { seg, ease } from '../runtime/anim.js';
+import { splitText, revealSpans, fitText } from 'card/fx/text.js';
+import { seg, ease } from 'card/runtime/anim.js';
 
 export const finale = {
   async init(ctx) {

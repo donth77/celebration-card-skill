@@ -7,10 +7,10 @@
 // finale = camera tilts up as the balloons fly away · outro = fade out.
 
 import * as THREE from 'three';
-import { getStage, glowTexture } from '../fx/stage3d.js';
-import { Balloons3D } from '../fx/balloons3d.js';
-import { listenForBlow } from '../fx/mic.js';
-import { seg, ease, lerp, clamp, noise1, rng } from '../runtime/anim.js';
+import { getStage, glowTexture } from 'card/fx/stage3d.js';
+import { Balloons3D } from 'card/fx/balloons3d.js';
+import { listenForBlow } from 'card/fx/mic.js';
+import { seg, ease, lerp, clamp, noise1, rng } from 'card/runtime/anim.js';
 
 const FONT_URL = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r186/examples/fonts/helvetiker_bold.typeface.json';
 

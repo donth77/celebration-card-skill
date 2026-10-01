@@ -12,7 +12,7 @@
 // Items: { src, caption?, video?, aspect? }. Captions render in the polaroid margin.
 
 import * as THREE from 'three';
-import { rng, clamp, ease, fract } from '../runtime/anim.js';
+import { rng, clamp, ease, fract } from 'card/runtime/anim.js';
 import { glowTexture } from './stage3d.js';
 
 /**

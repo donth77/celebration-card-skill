@@ -24,13 +24,16 @@
   <link rel="stylesheet" href="styles.css" />
 
   <!-- Pinned library versions. Only the modules a card actually imports are downloaded.
-       three → jsDelivr's minified single-file bundle (~190 KB gzipped vs ~420 KB unminified). -->
+       three → jsDelivr's minified single-file bundle (~190 KB gzipped vs ~420 KB unminified).
+       "card/" is this folder: modules import each other as 'card/fx/text.js', 'card/runtime/anim.js'…
+       so no file needs a parent-folder path, and the card works from any URL it is hosted at. -->
   <script type="importmap">
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/+esm",
       "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-      "tone": "https://cdn.jsdelivr.net/npm/tone@15.1.22/+esm"
+      "tone": "https://cdn.jsdelivr.net/npm/tone@15.1.22/+esm",
+      "card/": "./"
     }
   }
   </script>

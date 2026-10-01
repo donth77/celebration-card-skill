@@ -2,7 +2,7 @@
 // Good for: casual birthdays, friends, "chill" cards, photo memories. ~1:35.
 // Copy to music/song.js and edit; section names are what main.js anchors to.
 
-import { song, melody, chords, bass, drums, hit, riser } from '../music.js';
+import { song, melody, chords, bass, drums, hit, riser } from 'card/music/music.js';
 
 const VERSE = 'Fmaj7 | Em7 | Dm7 | Cmaj7';          // IVmaj7–iii7–ii7–Imaj7 in C: dreamy, descending
 const CHORUS = 'F | G | Em7 | Am7';

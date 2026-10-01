@@ -2,7 +2,7 @@
 // The letter DOM lives in #keepsake (built by keepsake.js); this scene only animates it in.
 // When the show ends, the runtime reveals the rest of the keepsake (gallery, replay, credits).
 
-import { seg, ease } from '../runtime/anim.js';
+import { seg, ease } from 'card/runtime/anim.js';
 
 export const letter = {
   init() {

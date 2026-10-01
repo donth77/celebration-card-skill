@@ -119,7 +119,7 @@ worst   // must be ≤ 0
 
 Write the equivalent for any custom 3D layout: photo cards, lanterns, flying caps.
 
-**Music levels** (synth route): open `/music/preview.html?song=song.js` and check `peakDb` ≤ −1, `clipped` = 0, and no notation warnings.
+**Music levels** (synth route): open `/song-preview.html?song=song.js` and check `peakDb` ≤ −1, `clipped` = 0, and no notation warnings.
 
 **Payload:**
 ```bash

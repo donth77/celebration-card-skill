@@ -21,14 +21,17 @@ notes, deploy.json, dev tools), writes absolute og:url / og:image for the final 
 verifies the page / preview image / audio seeking over HTTPS, and records the result in
 <card>/deploy.json so later redeploys are one command.
 
+Never uploaded, whatever the card folder holds: hidden files and folders (.env, .git, CLI state),
+key and credential files, and links that point outside the card folder. The plan lists any it held back.
+
 Publishing puts the sender's photos and words on a public URL — always show the plan to the user and
 get a yes before running with --yes. Tokens are only read from the environment, never passed as flags.
 """
 import argparse
 import json
 import os
-import random
 import re
+import secrets
 import shutil
 import string
 import subprocess
@@ -54,8 +57,19 @@ PLATFORMS = {
               "login": "npx surge login", "check": ["npx", "--yes", "surge", "whoami"],
               "ok": r"@", "fail": r"not authenticated|not logged in|Login"},
 }
-EXCLUDE_DIRS = {"qa", "node_modules", ".git", "__pycache__", "examples"}
-EXCLUDE_FILES = {"deploy.json", ".DS_Store", "preview.html", "Thumbs.db", ".gitkeep"}
+EXCLUDE_DIRS = {"qa", "node_modules", "__pycache__", "examples"}
+EXCLUDE_FILES = {"deploy.json", "song-preview.html", "preview.html", "Thumbs.db"}
+# Private files are never uploaded: anything hidden (dot-files and dot-folders), plus these.
+PRIVATE_SUFFIXES = {".env", ".pem", ".key", ".p12", ".pfx", ".keystore", ".jks"}
+PRIVATE_NAMES = {"credentials.json", "secrets.json", "token.json"}
+PRIVATE_PREFIXES = ("id_rsa", "id_ed25519", "id_ecdsa", "id_dsa")
+QUIET_HIDDEN = {".DS_Store", ".gitkeep", ".git"}  # expected clutter: skipped without a mention in the plan
+
+
+def is_private(rel):
+    name = rel.name.lower()
+    return (any(part.startswith(".") for part in rel.parts) or rel.suffix.lower() in PRIVATE_SUFFIXES
+            or name in PRIVATE_NAMES or name.startswith(PRIVATE_PREFIXES))
 
 
 def slugify(s):
@@ -64,7 +78,7 @@ def slugify(s):
 
 
 def default_name(card):
-    suffix = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(5))
+    suffix = "".join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(5))
     return f"{slugify(card.name)}-{suffix}"  # unguessable: the page holds personal photos
 
 
@@ -85,11 +99,20 @@ def logged_in(platform, env):
 
 
 def stage(card, name, include_md):
+    """Copy what gets published into a temp folder. Returns (folder, private files that were held back)."""
     root = Path(tempfile.mkdtemp(prefix="card-deploy-")) / name
     uses_music = "music/" in (card / "main.js").read_text(errors="ignore") if (card / "main.js").exists() else True
+    held_back = []
     for src in card.rglob("*"):
         rel = src.relative_to(card)
         if any(part in EXCLUDE_DIRS for part in rel.parts[:-1]) or src.name in EXCLUDE_FILES:
+            continue
+        if is_private(rel):
+            if not any(part in QUIET_HIDDEN for part in rel.parts) and not src.is_dir():
+                held_back.append(rel.as_posix())
+            continue
+        if src.is_symlink() and not src.resolve().is_relative_to(card):
+            held_back.append(f"{rel.as_posix()} (link to a file outside the card folder)")
             continue
         if not uses_music and rel.parts and rel.parts[0] == "music":
             continue  # the score isn't loaded by this card (file-audio route)
@@ -100,7 +123,7 @@ def stage(card, name, include_md):
         dst = root / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
-    return root
+    return root, sorted(held_back)
 
 
 def set_og(index_html, url):
@@ -166,7 +189,9 @@ def deploy(platform, staged, name, team, env):
         if m:
             try:
                 data = json.loads(m.group(0))
-                prod = data.get("url") or data.get("ssl_url") or data.get("deploy_url")
+                prod = data.get("ssl_url") or data.get("url") or data.get("deploy_url")
+                if prod and prod.startswith("http://"):
+                    prod = "https://" + prod[len("http://"):]
                 info = json.dumps({k: data[k] for k in data if k in ("site_name", "deploy_url", "claim_url", "password", "expires_at")})
             except json.JSONDecodeError:
                 pass
@@ -182,6 +207,8 @@ def deploy(platform, staged, name, team, env):
 
 
 def http(url, method="GET", headers=None):
+    if not url.startswith("https://"):  # only ever check the published site, never a local or file address
+        return 0, b"not an https address"
     req = urllib.request.Request(url, method=method, headers={"User-Agent": "celebration-card-deploy/1.0", **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
@@ -231,7 +258,7 @@ def main():
     expected = spec["url"].format(name=name) if spec["url"] else "(assigned by Netlify)"
 
     env = dict(os.environ)
-    staged = stage(card, name, args.include_md)
+    staged, held_back = stage(card, name, args.include_md)
     files = [p for p in staged.rglob("*") if p.is_file()]
     total = sum(p.stat().st_size for p in files)
     too_big = [f"{p.relative_to(staged)} ({p.stat().st_size / 1e6:.1f} MB)" for p in files if p.stat().st_size > spec["file_limit"]]
@@ -241,7 +268,8 @@ def main():
     plan = {
         "platform": platform, "name": name, "url": expected, "team": team, "files": len(files),
         "size_mb": round(total / 1e6, 1), "auth": auth_note if auth_ok else f"NOT READY — {auth_note}",
-        "excluded": "qa/, *.md (README, CREDITS, suno-prompt), deploy.json, music/examples, music/preview.html" + ("" if (staged / "music").exists() else ", music/ (not used)"),
+        "excluded": "qa/, *.md (README, CREDITS, suno-prompt), deploy.json, music/examples, song-preview.html, hidden files" + ("" if (staged / "music").exists() else ", music/ (not used)"),
+        **({"private_files_not_uploaded": held_back} if held_back else {}),
         "link_preview": ("password-protected: previews won't unfurl" if platform == "netlify-anon"
                          else "og:url + og:image set to the live address" if has_og else "no og.jpg — previews will show without an image"),
     }

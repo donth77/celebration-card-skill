@@ -1,7 +1,7 @@
 // EXAMPLE SONG — triumphant orchestral fanfare (original). 4/4 at 100 BPM in C.
 // Good for: graduations, retirements, promotions, awards, "you did it!" moments. ~1:15.
 
-import { song, melody, chords, arp, bass, drums, hit, riser } from '../music.js';
+import { song, melody, chords, arp, bass, drums, hit, riser } from 'card/music/music.js';
 
 const call = 'G4:1/3 G4:1/3 G4:1/3 C5:3 | E5:1/3 E5:1/3 E5:1/3 G5:3 | A5:1.5 G5:.5 F5 E5 | D5:4';
 const theme = 'C5:2 E5 G5 | A5:3 G5 | F5 E5 D5 E5 | G5:4 | C5:2 E5 G5 | C6:3 B5 | A5 G5 F5 D5 | C5:4';

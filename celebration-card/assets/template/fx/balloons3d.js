@@ -13,7 +13,7 @@
 //   const hit = balloons.pick(e.clientX, e.clientY); if (hit?.pop()) confetti.burst(balloons.screenPos(hit));
 
 import * as THREE from 'three';
-import { rng, noise1, clamp, ease } from '../runtime/anim.js';
+import { rng, noise1, clamp, ease } from 'card/runtime/anim.js';
 
 const H = 1.24;        // balloon height in local units (knot at y=0, top at y=H)
 const RADIUS = 0.6;    // collision sphere radius (local units), centred at y = H/2 — covers the tall axis

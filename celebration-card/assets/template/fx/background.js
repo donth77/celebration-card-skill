@@ -9,7 +9,7 @@
 // Colours: 4 hex values, darkest/background first. Audio level and beat pulse feed uLevel/uBeat.
 // Rendered at reduced resolution (scale) — soft gradients don't need full res, phones thank you.
 
-import { hexToRgb, lerp } from '../runtime/anim.js';
+import { hexToRgb, lerp } from 'card/runtime/anim.js';
 
 const HEAD = `precision mediump float;
 uniform vec2 uRes; uniform float uTime, uLevel, uBeat, uIntensity;

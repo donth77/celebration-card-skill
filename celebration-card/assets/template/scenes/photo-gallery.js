@@ -5,10 +5,10 @@
 // Photos change on bar lines: each photo gets a whole number of bars, the camera travels for
 // the first part of its slot and then holds (with a slow dolly) while the music carries it.
 
-import { getStage } from '../fx/stage3d.js';
-import { Gallery3D, holdTravel } from '../fx/gallery3d.js';
-import { slideshow } from '../fx/photo.js';
-import { clamp, fract } from '../runtime/anim.js';
+import { getStage } from 'card/fx/stage3d.js';
+import { Gallery3D, holdTravel } from 'card/fx/gallery3d.js';
+import { slideshow } from 'card/fx/photo.js';
+import { clamp, fract } from 'card/runtime/anim.js';
 
 export const photoGallery = {
   async init(ctx) {

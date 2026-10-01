@@ -182,7 +182,7 @@ After writing the prompt, tell the user exactly what to do (the "How to make it"
 - The card plays silently on the planned timing. Say so plainly.
 - Give them the one-line next step: "Save the MP3 as `assets/audio/song.mp3` and tell me, and I'll sync everything to it."
 
-**Render a guide track.** Compose a quick instrumental in `music/` with exactly the planned sections, BPM and meter (synth-music.md). Export it (`music/preview.html` → WAV → `ffmpeg … guide-track.mp3`), analyze it, and let the card play it until the real song exists. The card is then never silent, the user can preview the pacing, and the whole file-audio sync path (analysis, `--sections`, re-timing) gets tested before the song arrives. Label it as a stand-in in the credits, and swap it out when `song.mp3` lands, e.g. `main.js` picks `song.mp3` + `analysis.json` if present, else the guide track.
+**Render a guide track.** Compose a quick instrumental in `music/` with exactly the planned sections, BPM and meter (synth-music.md). Export it (`song-preview.html` → WAV → `ffmpeg … guide-track.mp3`), analyze it, and let the card play it until the real song exists. The card is then never silent, the user can preview the pacing, and the whole file-audio sync path (analysis, `--sections`, re-timing) gets tested before the song arrives. Label it as a stand-in in the credits, and swap it out when `song.mp3` lands, e.g. `main.js` picks `song.mp3` + `analysis.json` if present, else the guide track.
 
 If you're running unattended (no user to generate the song), deliver the card on the guide track with `suno-prompt.md` and a `README.md` section on syncing.
 

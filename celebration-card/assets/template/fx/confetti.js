@@ -8,7 +8,7 @@
 //   confetti.burst({ shapes: ['heart'], colors: ['#ff4d6d', '#ffb3c1'] });
 //   confetti.burst({ shapes: [{ emoji: '🎂' }, { emoji: '🎉' }], count: 30, scale: 2 });
 
-import { mixColor } from '../runtime/anim.js';
+import { mixColor } from 'card/runtime/anim.js';
 
 const TAU = Math.PI * 2;
 

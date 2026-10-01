@@ -5,7 +5,7 @@
 //   revealSpans(spans, s.t, { start: 0.4, stagger: 0.05, dur: 0.7, from: { y: 0.8, blur: 10 } });
 //   fitText(nameEl, { max: 220 });          // long names still fit on a phone
 
-import { clamp, ease as E } from '../runtime/anim.js';
+import { clamp, ease as E } from 'card/runtime/anim.js';
 
 /** Split an element's text into spans (chars or words). Keeps the full text for screen readers. */
 export function splitText(el, { by = 'chars', className = 'sp' } = {}) {

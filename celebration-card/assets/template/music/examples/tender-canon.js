@@ -1,7 +1,7 @@
 // EXAMPLE SONG — tender arrangement of Pachelbel's Canon (public domain). 4/4 at 66 BPM in D.
 // Good for: anniversaries, weddings, heartfelt thank-yous, gentle/memorial cards. ~1:35.
 
-import { song, melody, chords, arp, bass, MELODIES } from '../music.js';
+import { song, melody, chords, arp, bass, MELODIES } from 'card/music/music.js';
 
 const C = MELODIES.canonInD;          // 8-chord ground, 4 bars per cycle
 const x2 = (s) => `${s} | ${s}`;

@@ -85,7 +85,7 @@ export async function createCard(config = {}) {
   if (audio.synth) {
     const mod = await audio.synth();
     song = mod.default || mod.song || mod;
-    const { SynthClock } = await import('../music/music.js');
+    const { SynthClock } = await import('card/music/music.js');
     audioClock = new SynthClock(song);
     await audioClock.load();
     timing = audioClock.timing;

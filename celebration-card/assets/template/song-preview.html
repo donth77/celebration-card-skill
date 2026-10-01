@@ -6,10 +6,11 @@
   <title>Song preview</title>
   <meta name="robots" content="noindex" />
   <!-- Dev tool: render a synthesized song offline, listen, check levels, download a WAV.
-       Open /music/preview.html?song=song.js (or examples/fanfare.js). Not part of the card.
+       Open /song-preview.html?song=song.js (or examples/fanfare.js); the name is a file in music/.
+       Not part of the card: deploy.py leaves it out.
        Offline rendering takes roughly 1–2× the song's length; add &rate=22050 for a faster draft
        check (export the final WAV at the default 44100). -->
-  <script type="importmap">{ "imports": { "tone": "https://cdn.jsdelivr.net/npm/tone@15.1.22/+esm" } }</script>
+  <script type="importmap">{ "imports": { "tone": "https://cdn.jsdelivr.net/npm/tone@15.1.22/+esm", "card/": "./" } }</script>
   <style>
     body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; max-width: 760px; color: #222; background: #fafafa; }
     button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
@@ -24,7 +25,7 @@
   <p><a id="dl" download="song.wav" hidden>Download WAV</a></p>
   <pre id="out">…</pre>
   <script type="module">
-    import { song as normalise, renderSongToWav } from './music.js';
+    import { song as normalise, renderSongToWav } from 'card/music/music.js';
     const out = document.getElementById('out');
     const params = new URLSearchParams(location.search);
     const input = document.getElementById('mod');
@@ -37,7 +38,10 @@
       out.textContent = 'Rendering…';
       const t0 = performance.now();
       try {
-        const mod = await import(`./${input.value}?v=${Date.now()}`);
+        const name = input.value.trim();
+        // Only song files that live in music/ (or music/examples/): never an arbitrary path or URL.
+        if (!/^(examples\/)?[\w-]+\.js$/.test(name)) throw new Error(`"${name}" is not a song file in music/ (use e.g. song.js or examples/fanfare.js)`);
+        const mod = await import(`card/music/${name}?v=${Date.now()}`);
         const S = mod.default._isSong ? mod.default : normalise(mod.default);
         const wav = await renderSongToWav(S, { sampleRate: Number(params.get('rate')) || 44100 });
         const buf = await new AudioContext().decodeAudioData(await wav.arrayBuffer());

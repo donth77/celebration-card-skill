@@ -6,7 +6,7 @@
 //   const show = slideshow(container, photos);         // cross-fading DOM slideshow
 //   show.update(slotFloat);                            // e.g. (s.t / secondsPerPhoto)
 
-import { clamp, lerp, ease } from '../runtime/anim.js';
+import { clamp, lerp, ease } from 'card/runtime/anim.js';
 
 /** <figure class="photo"><img><figcaption></figure> for a content.photos item. */
 export function photoEl(item, { className = 'photo', caption = true } = {}) {

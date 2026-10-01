@@ -1,6 +1,8 @@
 # Runtime & effects API
 
-Everything in `assets/template/`. No build step: native ES modules plus an import map that pins `three`, `three/addons/` and `tone` on jsDelivr. A module is only downloaded if something imports it.
+Everything in `assets/template/`. No build step: native ES modules plus an import map that pins `three`, `three/addons/` and `tone` on jsDelivr and points `card/` at the card's own folder. A module is only downloaded if something imports it.
+
+**Imports.** Files in the same folder import each other as `./name.js`. Across folders, use the alias: `import { ease } from 'card/runtime/anim.js'`, `import { getStage } from 'card/fx/stage3d.js'`. Don't write parent-folder paths. The alias keeps every module working wherever the card is hosted. Any extra HTML page that loads card modules needs the same `"card/": "./"` line in its own import map, and should sit next to `index.html`.
 
 ## Contents
 1. [File layout](#file-layout)
@@ -25,6 +27,7 @@ scenes/           opening.js, wish.js (3D cake), finale.js, letter.js, photo-gal
 runtime/          card.js (engine), timing.js, clock.js, anim.js, debug.js        ← don't edit unless needed
 fx/               layer, confetti, fireworks, points, background, stage3d, gallery3d, balloons3d, text, lyrics, photo, sfx, mic
 music/            music.js (Tone.js engine + notation), melodies.js (PD tunes), song.js (this card's song)
+song-preview.html dev tool: render the synthesized song, check levels, export a WAV (never published)
 assets/audio/     song.mp3 + analysis.json (file routes)
 assets/media/     prepared photos/videos + media.json
 ```

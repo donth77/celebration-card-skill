@@ -115,6 +115,7 @@ Principles that keep cards correct:
 - **Animate as a pure function of time** (`s.t`, `ctx.t`, the `anim.js` helpers), never by accumulating per-frame deltas. That's what lets the card pause, seek, replay and be screenshotted at any moment, and it keeps everything locked to the music.
 - **Anchor moments to the music** (`ctx.at('chorus')`, cues with `every: 'bar'`), not hard-coded seconds. When the timing changes (the real Suno song arrives), the visuals follow.
 - **Text goes in the DOM, not on canvas.** It stays crisp, selectable and readable by screen readers. Fit long names with `fitText`.
+- **Import across folders with the `card/` alias**, e.g. `import { ease } from 'card/runtime/anim.js'`. The import map in `index.html` points `card/` at the card's own folder. Files in the same folder use `./name.js`. No module reaches into a parent folder, so the card works from any URL.
 - **3D objects must never interpenetrate.** Balloons, photo cards and props get spacing at placement plus a separation pass when they move. Check it numerically (see `references/qa.md`); clipping is the first thing viewers notice.
 - **Budget for phones, starting with the first impression.** The gate should be tappable within a few seconds.
   - Every 3D scene shares one stage (`getStage(ctx)`), and each owns a group.
