@@ -121,7 +121,8 @@ Principles that keep cards correct:
   - Every 3D scene shares one stage (`getStage(ctx)`), and each owns a group.
   - Call `stage.prime(group)` in `init` *without* awaiting it, so shaders compile in the background instead of freezing the first 3D frame after the tap.
   - Respect `ctx.quality` (particles, DPR, bloom) and `ctx.reducedMotion`.
-  - The stage renders only while a scene calls `stage.show()`.
+  - The stage renders only while a scene calls `stage.show()`. Draw only what changes: skip still frames, throttle under menus, and stop when something covers the 3D. Budgets and techniques are in `references/performance.md`.
+- **Phones aren't desktops.** Keep text and controls clear of the notch and the home bar by positioning with the `--safe-*` CSS variables (never `env()` directly). Start any sound, the song's or a video's, with `play()` inside the tap itself. Give anything newer than iOS 15 a fallback. `references/qa.md` → Phones and browsers has the list.
 
 For techniques (3D scenes, particles, shader backgrounds, photo treatments, transitions, kinetic type, interactions) read `references/visual-cookbook.md`.
 
@@ -150,9 +151,11 @@ Use both. A scene that only knows section boundaries feels like a slideshow; one
 Follow `references/qa.md`. Serve the folder with `python3 <skill>/scripts/serve.py <card>`; ES modules don't load from `file://`, and this server supports the range requests audio seeking needs. Then:
 
 - run `node <skill>/scripts/snap.mjs <url> --out <card>/qa --tap --desktop --times …` (or drive a browser yourself) at 390×844 and at desktop size
+- run it again as an iPhone in Safari's engine, upright and sideways (`--webkit --notch`, then with `--landscape`), and fix every `unsafe` item it lists: text or buttons under the notch, the rounded corners or the home bar
 - tap the gate and confirm the clock runs (`card.state()`). `snap.mjs` also reports `gateReadyMs`; a cold-cache desktop should be ready in about 5 s or less.
 - capture each scene with `await card.snap(t)` and look at every screenshot critically: legibility, cropping, overlap with the notch, empty frames, clipping 3D objects
 - check the console for errors, reduced motion, `?quality=low`, and the end screen
+- check performance against `references/performance.md`: the gate tappable in about 3 s on a phone, smooth motion, no hitch after the tap
 
 Fix what you find, then look again.
 
@@ -176,7 +179,7 @@ Finish with a `README.md` in the card folder covering how to preview, edit text 
 
 ## Guardrails, and why they matter
 
-- **Sound needs a tap.** Start audio only from the gate's click handler (the runtime does this). On iOS, `navigator.audioSession.type = 'playback'` keeps Web Audio audible with the ringer switch off; the runtime and `sfx.js` already set it.
+- **Sound needs a tap.** Start audio only from the gate's click handler (the runtime does this), and a video with sound from its own tap. On iOS, `navigator.audioSession.type = 'playback'` keeps Web Audio audible with the ringer switch off; the runtime and `sfx.js` already set it.
 - **Licensing.** A public-domain *composition* (Beethoven, "Happy Birthday") doesn't make a *recording* free. Use PD/CC0 recordings or synthesize, record sources in `CREDITS.md`, and prefer CC0/CC-BY over CC-BY-SA. Don't host commercial songs on a public page without telling the user the risk.
 - **People's voices and likeness.** Never clone a real person's voice without their consent; the sender cloning their *own* voice is fine. Don't generate fake photos of real people.
 - **Privacy.** These pages hold family photos and names. The prep script strips GPS. Use unguessable URLs and `noindex`, and warn that public repos (GitHub Pages free tier) expose the photos.
@@ -195,12 +198,13 @@ Finish with a `README.md` in the card folder covering how to preview, edit text 
 | `references/elevenlabs.md` | ElevenLabs music (composition plans with exact timing), voice, SFX, lyric timestamps |
 | `references/synth-music.md` | Composing with `music/music.js`: notation, presets, arrangement recipes, PD melodies, example songs |
 | `references/audio-sources.md` | Public-domain / CC0 sources an agent can fetch, licence checks, credits, the user's own files |
-| `references/qa.md` | Browser QA procedure, `card.snap()`, overlap checks, performance, checklist |
+| `references/qa.md` | Browser QA procedure, `card.snap()`, iPhone and Android differences (notch, older Safari, hosts), overlap checks, checklist |
+| `references/performance.md` | Budgets and techniques for a smooth card on an older phone: the first impression, drawing, layout, media and streamed video, measuring |
 | `references/deploy-and-share.md` | Publishing with `deploy.py` (logins, tokens, teams, redeploys, take-down), other hosts, link previews, privacy, QR codes, the hand-off note |
 
 Scripts:
 - `scripts/prepare_media.py`: photos and video
 - `scripts/analyze_audio.py`: beats, sections, loudness bands
 - `scripts/serve.py`: local preview with seeking and no caching
-- `scripts/snap.mjs`: headless QA screenshots and state report
+- `scripts/snap.mjs`: headless QA screenshots and state report, also as an iPhone with its notch drawn
 - `scripts/deploy.py`: publish to Cloudflare Pages, Vercel, Netlify or surge.sh, with plan-then-confirm and live checks

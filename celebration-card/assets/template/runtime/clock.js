@@ -61,30 +61,53 @@ export class FileClock {
     this.preloadMode = preload;
     const el = (this.el = new Audio());
     el.preload = preload === 'stream' ? 'auto' : 'metadata';
-    el.src = src;
+    // The element gets the in-memory copy (see _prefetch), not the URL: some hosts (Cloudflare Pages) answer range
+    // requests with the whole file, and Safari won't seek in a URL that does (an iPhone froze replaying a song it had
+    // streamed). The card's gate waits for the copy (inMemoryReady); the URL only streams when the copy can't be made
+    // or isn't there yet at the tap, and then the copy takes over at the next seek (a replay).
+    if (preload === 'stream' || typeof fetch !== 'function') el.src = src;
     this._ct = 0; this._ctAt = 0; this._t = 0; this._at = 0;
     this.missing = false;
     this.inMemory = false;
+    /** Resolves true once the song is in memory, false if it will stream instead. */
+    this.inMemoryReady = new Promise((resolve) => { this._inMemoryDone = resolve; });
   }
 
   async _prefetch() {
-    if (this.preloadMode === 'stream' || typeof fetch !== 'function') return;
-    this._abort = new AbortController();
+    if (this._prefetching) return;
+    this._prefetching = true;
+    if (this.preloadMode === 'stream' || typeof fetch !== 'function') { this._inMemoryDone(false); return; }
     try {
-      const head = await fetch(this.src, { method: 'HEAD', signal: this._abort.signal });
+      const head = await fetch(this.src, { method: 'HEAD' });
       const len = Number(head.headers.get('content-length')) || 0;
-      if (!head.ok || len > 15e6) { this.el.preload = 'auto'; return; }
-      const r = await fetch(this.src, { signal: this._abort.signal });
-      if (!r.ok) return;
-      const blob = await r.blob();
-      if (this._started) return; // playback already began: keep the streaming copy
-      this._blobUrl = URL.createObjectURL(blob);
-      this._swapping = this.el.currentTime; // hold the position (e.g. a QA snapshot seeked while paused)
-      this.el.addEventListener('loadedmetadata', () => { const t = this._swapping; if (t) this.el.currentTime = t; this._swapping = null; }, { once: true });
-      this.el.src = this._blobUrl;
-      this.el.load();
-      this.inMemory = true;
-    } catch { this.el.preload = 'auto'; /* aborted or offline: stream instead */ }
+      if (!head.ok || len > 15e6) { this._inMemoryDone(false); this._stream(); return; }
+      const r = await fetch(this.src);
+      if (!r.ok) { this._inMemoryDone(false); this._stream(); return; }
+      const url = URL.createObjectURL(await r.blob());
+      // playback already began from the URL: the copy takes over at the next seek, while the song is stopped
+      if (this._started) this._lateCopy = url;
+      else this._useCopy(url, this._pendingT ?? this.el.currentTime);   // hold the position (e.g. a QA snapshot seeked while paused)
+      this._inMemoryDone(!this._started);
+    } catch { this._inMemoryDone(false); this._stream(); /* offline: stream instead */ }
+  }
+
+  /** Switch the element to the in-memory copy, holding the clock at t until it has loaded. */
+  _useCopy(url, t) {
+    this._blobUrl = url; this.inMemory = true;
+    this._swapping = t;
+    this.el.addEventListener('loadedmetadata', () => { const at = this._swapping; if (at) this.el.currentTime = at; this._swapping = null; }, { once: true });
+    this.el.src = url;
+    this.el.load();
+  }
+
+  /** Play straight from the URL (no in-memory copy). */
+  _stream() {
+    if (this.inMemory) return;
+    this.el.preload = 'auto';
+    if (this.el.getAttribute('src')) return;
+    const t = this._pendingT;
+    if (t) this.el.addEventListener('loadedmetadata', () => { this.el.currentTime = t; }, { once: true });
+    this.el.src = this.src;
   }
 
   /** Resolves once metadata is known, or after a short timeout (iOS won't buffer before a tap). */
@@ -104,7 +127,7 @@ export class FileClock {
   unlock() {
     setPlaybackAudioSession();
     this._started = true;
-    if (!this.inMemory) this._abort?.abort(); // too late to switch sources mid-play; stream it
+    if (!this.inMemory) this._stream();   // the copy isn't here yet: stream for now (it keeps downloading, for a replay)
     // Calling play() inside the gesture is what unlocks the element on iOS.
     const p = this.el.play();
     if (p && p.catch) p.catch(() => {});
@@ -113,13 +136,16 @@ export class FileClock {
 
   play() {
     this._started = true;
-    if (!this.inMemory) this._abort?.abort();
+    if (!this.inMemory) this._stream();
     this._resetSmoothing();
     return this.el.play();
   }
   pause() { this.el.pause(); }
   seek(t) {
     const d = this.duration;
+    // streamed so far, with the copy now here and the song stopped (a replay): seek in the copy, not the URL
+    if (this._lateCopy && (this.el.paused || this.el.ended)) { const url = this._lateCopy; this._lateCopy = null; this._useCopy(url, clamp(t, 0, Number.isFinite(d) ? Math.max(0, d - 0.01) : t)); this._resetSmoothing(); return; }
+    if (!this.el.getAttribute('src')) this._pendingT = t;   // no source yet: applied when it arrives
     if (this._swapping != null) this._swapping = t;
     this.el.currentTime = clamp(t, 0, Number.isFinite(d) ? Math.max(0, d - 0.01) : t);
     this._resetSmoothing();

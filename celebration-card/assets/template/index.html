@@ -27,6 +27,8 @@
        three → jsDelivr's minified single-file bundle (~190 KB gzipped vs ~420 KB unminified).
        "card/" is this folder: modules import each other as 'card/fx/text.js', 'card/runtime/anim.js'…
        so no file needs a parent-folder path, and the card works from any URL it is hosted at. -->
+  <!-- Import maps arrived in Safari 16.4: on an older iPhone this adds them (where they exist it does nothing). -->
+  <script async src="https://cdn.jsdelivr.net/npm/es-module-shims@2/dist/es-module-shims.js" crossorigin="anonymous"></script>
   <script type="importmap">
   {
     "imports": {

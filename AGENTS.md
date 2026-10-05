@@ -11,8 +11,9 @@ celebration-card/                the skill; installers copy only this folder
                                  QA, deliver) and the guardrails
   references/                    loaded on demand by SKILL.md:
                                    runtime-api.md (engine, scenes, cues, every fx module),
-                                   visual-cookbook.md, occasions.md, qa.md, deploy-and-share.md,
-                                   suno.md, elevenlabs.md, synth-music.md, audio-sources.md
+                                   visual-cookbook.md, occasions.md, qa.md, performance.md,
+                                   deploy-and-share.md, suno.md, elevenlabs.md, synth-music.md,
+                                   audio-sources.md
   scripts/                       one CLI per job (table below)
   assets/template/               the card every build starts from: index.html, main.js,
                                  content.js, styles.css, runtime/, fx/, scenes/, music/,
@@ -23,8 +24,8 @@ README.md                        user-facing: plain English, keep it short
 AGENTS.md                        this file
 ```
 
-Ignored and local only: `celebration-card-workspace/` (eval runs and logo working files),
-`.claude/`, `.playwright-mcp/`, `.env`.
+Ignored and local only: `celebration-card-workspace/` (eval runs, logo working files and real cards
+made with the skill), `.claude/`, `.playwright-mcp/`, `.wrangler/`, `.env`.
 
 The README title is an HTML `<h1>` so the logo can sit above it.
 
@@ -33,7 +34,7 @@ The README title is an HTML `<h1>` so the logo can sit above it.
 | Script | Purpose |
 | --- | --- |
 | `serve.py` | local preview server with HTTP Range (audio seeking) and no caching; if port 8765 is busy it takes the next free one and prints it |
-| `snap.mjs` | headless QA: phone and desktop frames at exact song times through `card.snap()`, a tap test for audio, console errors and failed requests in `qa-report.json` |
+| `snap.mjs` | headless QA: phone and desktop frames at exact song times through `card.snap()`, a tap test for audio, console errors and failed requests in `qa-report.json`; `--webkit` runs it as an iPhone in Safari's engine, `--landscape` turns the phone, `--notch` draws a notch and lists text or buttons under it, `--cpu` slows Chromium's CPU |
 | `prepare_media.py` | photos to WebP plus thumbnails with all metadata stripped; videos to H.264 MP4 plus a poster; writes `media.json` |
 | `analyze_audio.py` | tempo, beats, downbeats, meter, sections, energy and loudness bands for any song, written to `analysis.json` |
 | `deploy.py` | publish to Cloudflare Pages, Vercel, Netlify or surge.sh: prints a plan, publishes only with `--yes`, verifies the live page, records `<card>/deploy.json` |
@@ -48,6 +49,9 @@ The README title is an HTML `<h1>` so the logo can sit above it.
   `index.html`.
 - Animation is a pure function of song time, so any moment can be seeked, replayed and
   screenshotted. Details are in `SKILL.md` and `references/runtime-api.md`.
+- The template positions anything near the screen's edges with the `--safe-*` CSS variables, not
+  `env()`, so `snap.mjs --notch` can simulate a notch. It must keep working on iOS 15: give newer CSS
+  a fallback (see the table in `references/qa.md`).
 - Scripts run on Python 3.9+ (the macOS system Python must work) with the standard library plus
   numpy and Pillow. Audio and video go through ffmpeg/ffprobe subprocesses, always as argument
   lists, never a shell string. Temporary files live in `tempfile.TemporaryDirectory()` blocks.
@@ -66,8 +70,9 @@ The skill is listed at https://www.skillsdirectory.com/skills/donth77-celebratio
 grades it with a static pattern scanner. Check a change before pushing at
 https://www.skillsdirectory.com/security/scan (a GitHub link or a ZIP of `celebration-card/`).
 The grade comes from `SKILL.md`; findings in bundled files are listed but not counted. As of
-2026-10-01 it scores A (100/100) with three findings left, all for the scripts running ffmpeg and
-the hosting CLIs through `subprocess`.
+2026-10-05 it scores A (100/100) with three findings left, all for the scripts running ffmpeg and
+the hosting CLIs through `subprocess`. The ZIP upload takes up to 4 MB: zip the folder without the
+eval song and photos (the grade only reads text).
 
 The scanner matches text, not behavior. These have set it off before, so keep them out of the
 skill folder (code, comments and docs alike):
@@ -89,6 +94,11 @@ keep it and accept the finding.
 python3 celebration-card/scripts/serve.py celebration-card/assets/template
 node celebration-card/scripts/snap.mjs http://localhost:8765/ --out /tmp/card-qa --tap --desktop \
   --times gate,start,verse1+2bar,verse2+2bar,finale+2bar,outro+1bar,end
+# the same as an iPhone in Safari's engine, upright and sideways, with the notch drawn
+node celebration-card/scripts/snap.mjs http://localhost:8765/ --out /tmp/card-qa/iphone --webkit --notch --tap \
+  --times gate,start,verse2+2bar,end
+node celebration-card/scripts/snap.mjs http://localhost:8765/ --out /tmp/card-qa/iphone-side --webkit --notch \
+  --landscape --times gate,verse2+2bar,end
 
 # the synthesized songs: open these while the server runs and read the report on the page
 #   http://localhost:8765/song-preview.html?song=song.js&rate=22050
@@ -100,12 +110,14 @@ python3 celebration-card/scripts/prepare_media.py celebration-card/evals/files/j
 python3 celebration-card/scripts/deploy.py <card-folder> --to netlify-anon     # plan only: nothing is published
 ```
 
-After `snap.mjs`, open the PNGs and look at them; `qa-report.json` should show no errors and no
-failed scenes. `snap.mjs` needs the `playwright` package: it finds a copy in the project or the
-npx cache, or takes `--playwright <path>`.
+After `snap.mjs`, open the PNGs and look at them; `qa-report.json` should show no errors, no
+failed scenes and, with `--notch`, no `unsafe` items. `snap.mjs` needs the `playwright` package: it
+finds a copy in the project or the npx cache, or takes `--playwright <path>`. For `--webkit` it needs
+a Playwright WebKit build; if the one that copy expects is missing, it uses the newest one installed.
 
-`deploy.py --yes` publishes for real and has not been run end to end yet. Do it only with the
-owner's go-ahead, then check the live link, the preview image and audio seeking.
+`deploy.py --yes` publishes for real. It has been run end to end on Cloudflare Pages (2026-10-05):
+Cloudflare answers range requests with 200, which the runtime's in-memory song handles. Run it only
+with the owner's go-ahead, then check the live link, the preview image and audio seeking.
 
 `evals/evals.json` holds three end-to-end prompts. A full round with and without the skill costs
 about 3 million tokens, so prefer targeted checks.

@@ -5,6 +5,9 @@
 # Test runs from developing the skill (large, local only)
 celebration-card-workspace/
 
+# Wrangler's local state from Cloudflare deploys
+.wrangler/
+
 # OS, Python, Node
 .DS_Store
 __pycache__/

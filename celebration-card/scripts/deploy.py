@@ -150,15 +150,24 @@ def find_urls(text, domain):
     return list(dict.fromkeys(re.findall(rf"https://[a-z0-9.-]+\.{re.escape(domain)}[^\s\"'<>]*", text)))
 
 
+def wrangler(args, env):
+    """Run a wrangler command. Recent wrangler versions hand Pages commands to Cloudflare's newer Workers flow; when that
+    fails it asks for --force to use Pages itself, so try once more with it."""
+    code, out = run(["npx", "--yes", "wrangler@latest", *args], env=env)
+    if code != 0 and "--force" in out and "Cloudflare Pages" in out:
+        code, out = run(["npx", "--yes", "wrangler@latest", *args, "--force"], env=env)
+    return code, out
+
+
 def deploy(platform, staged, name, team, env):
     """Run the platform CLI; return (ok, production_url, extra_info, raw_output)."""
     if platform == "cloudflare":
         if env.get("CLOUDFLARE_ACCOUNT_ID") is None and team:
             env["CLOUDFLARE_ACCOUNT_ID"] = team
-        code, out = run(["npx", "--yes", "wrangler@latest", "pages", "project", "create", name, "--production-branch", "main"], env=env)
+        code, out = wrangler(["pages", "project", "create", name, "--production-branch", "main"], env)
         if code != 0 and not re.search(r"already exists|8000002", out):
             return False, None, "", out
-        code, out = run(["npx", "--yes", "wrangler@latest", "pages", "deploy", str(staged), "--project-name", name, "--branch", "main", "--commit-dirty=true"], env=env)
+        code, out = wrangler(["pages", "deploy", str(staged), "--project-name", name, "--branch", "main", "--commit-dirty=true"], env)
         urls = find_urls(out, "pages.dev")
         prod = None
         if urls:  # deployment URL is https://<hash>.<project>.pages.dev → production is the project subdomain
@@ -233,7 +242,10 @@ def verify(url, staged):
     audio = next((p for p in (staged / "assets" / "audio").glob("*.mp3")), None) if (staged / "assets" / "audio").exists() else None
     if audio:
         rel = audio.relative_to(staged).as_posix()
-        checks["audio range (206 = seekable)"] = http(url + rel, "GET", {"Range": "bytes=0-1"})[0]
+        code = http(url + rel, "GET", {"Range": "bytes=0-1"})[0]
+        checks["audio seeking"] = (
+            "206: the host supports range requests" if code == 206 else
+            "200: the host ignores range requests (Cloudflare Pages); fine, the card plays songs up to 15 MB from memory" if code == 200 else code)
     return checks
 
 

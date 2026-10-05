@@ -41,7 +41,8 @@ Pick one, or let Claude suggest:
 3. Claude suggests an idea for the card and how it will follow the music.
 4. If you picked Suno, Claude gives you the prompt to paste into Suno. Save the take you like as
    `song.mp3` and tell Claude. Until then, the card plays a stand-in track.
-5. Claude builds the card, checks it in a phone-sized browser, and fixes what it finds.
+5. Claude builds the card, checks it as an iPhone and an Android phone would show it (the notch
+   included), and fixes what it finds.
 6. You preview it with the sound on and ask for changes. All the words live in one file,
    `content.js`, so you can also edit them yourself.
 7. To publish, Claude first shows you where the card will go and what will be uploaded. Nothing

@@ -28,7 +28,7 @@ When the user wants the card published, use the bundled script rather than hand-
 - stages a clean copy (no `qa/`, notes, `deploy.json` or dev tools)
 - never uploads private files: hidden files and folders (`.env`, `.git`, CLI state), key and credential files (`*.pem`, `*.key`…), files with no extension, or links that point outside the card folder. If it holds any back, the plan lists them under `not_uploaded`: mention that to the user
 - writes absolute `og:url`/`og:image` for the final address
-- deploys and verifies the page, the preview image and audio seeking (HTTP 206) over HTTPS
+- deploys and verifies the page, the preview image and audio seeking over HTTPS (206 means the host supports range requests; Cloudflare Pages answers 200, which is fine because the card plays the song from memory)
 - records everything in `<card>/deploy.json`, so redeploying after edits is one command
 
 **1. Plan.** It's safe: nothing is published, and it also checks the login:

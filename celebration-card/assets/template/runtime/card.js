@@ -420,7 +420,10 @@ export async function createCard(config = {}) {
   window.card = card;
 
   // ---------------------------------------------------------------- boot
-  await Promise.race([Promise.all([initAll, fontsReady]), new Promise((r) => setTimeout(r, gateMaxWaitMs))]);
+  // the seal waits for the song to be in memory too (FileClock): streamed from a host without range requests, Safari
+  // can't seek in it, so a replay would freeze
+  const songReady = audioClock?.inMemoryReady ? ctx.track(audioClock.inMemoryReady).then(() => mark('song')) : Promise.resolve();
+  await Promise.race([Promise.all([initAll, fontsReady, songReady]), new Promise((r) => setTimeout(r, gateMaxWaitMs))]);
   mark('ready');
   await new Promise((r) => setTimeout(r, gateMinMs));
   requestAnimationFrame(frame);

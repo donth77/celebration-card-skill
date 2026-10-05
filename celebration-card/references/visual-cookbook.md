@@ -143,6 +143,8 @@ Build from primitives with good materials; it looks premium and needs no assets.
    - **B-roll clips** run muted (`video` items in gallery3d, or `<video muted playsinline loop>` in the DOM) while the music continues.
    - **Video messages with their own sound** go in the keepsake (the lightbox plays them with controls), or in a dedicated quiet section with the music ducked.
    - Always provide a `poster`: iOS Low Power Mode refuses autoplay.
+   - A video with sound starts with `play()` called inside the tap itself (an iPhone refuses it after an `await`).
+   - A long video in high quality streams as HLS, with every copy cut at the same points, sound included: see `performance.md` → Media.
 6. **No photos at all?** Don't fake them. Use illustration, 3D objects and words. Never generate fake photos of real people.
 
 ## Lyrics on screen
@@ -206,16 +208,7 @@ Many short messages (retirement, farewell, team birthday):
 
 ## Performance budget
 
-| Item | Budget |
-|---|---|
-| First load before the gate is ready | ≤ 3 MB (fonts, first scene, audio metadata) |
-| Whole card (no video) | ≤ 15 MB |
-| Photos | 1920 px max, WebP q≈82, ~150–350 KB each |
-| Draw calls (3D) | ≤ 150; use InstancedMesh for repeats |
-| Particles | ≤ 600 confetti / 1,500 spark segments at high, scaled by quality |
-| Lights | 1 point light (candles), avoid shadows; fake contact shadows with a radial-gradient plane |
-
-The runtime drops the quality tier automatically if FPS stays under ~38. Test `?quality=low` too.
+The budgets (first load, payload, photos, draw calls, particles, lights, frame rate) and how to stay within them are in `performance.md`. In short: design for a five-year-old phone, draw only what changes, and scale counts by `ctx.quality`. The runtime drops the quality tier automatically if the frame rate stays under ~38; test `?quality=low` too.
 
 ## Accessibility
 

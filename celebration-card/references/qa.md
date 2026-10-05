@@ -7,8 +7,11 @@ A card that's broken on the recipient's phone is worse than no card. Test like t
 2. [Drive it](#drive-it)
 3. [Screenshot every moment](#screenshot-every-moment)
 4. [What to look for](#what-to-look-for)
-5. [Numeric checks](#numeric-checks)
-6. [Checklist](#checklist)
+5. [Phones and browsers](#phones-and-browsers)
+6. [Numeric checks](#numeric-checks)
+7. [Checklist](#checklist)
+
+Speed and smoothness have their own guide: `performance.md`.
 
 ## Serve it
 
@@ -29,7 +32,7 @@ node <skill>/scripts/snap.mjs http://localhost:8765/ --out <card>/qa --tap --des
   --times gate,start,intro+2bar,verse1+2bar,chorus1,bridge,chorus3+1bar,outro+1bar,end --play-into chorus3:3
 ```
 
-It writes phone (and, with `--desktop`, 1440×900) screenshots plus `qa-report.json`: card state, failed scenes, console errors, failed requests, and whether audio started after the tap. **Then open every PNG and look at it.** The script captures; you judge. It needs the `playwright` package and its Chromium browser. It looks in the project first, then in the npx cache (for example the copy the Playwright MCP server uses). If neither has one, add Playwright to the project, or point at an installed copy with `--playwright <path>`.
+It writes phone (and, with `--desktop`, 1440×900) screenshots plus `qa-report.json`: card state, failed scenes, console errors, failed requests, and whether audio started after the tap. Then run it again as an iPhone, upright and sideways (`--webkit --notch`, see [Phones and browsers](#phones-and-browsers)). **Then open every PNG and look at it.** The script captures; you judge. It needs the `playwright` package and its Chromium browser. It looks in the project first, then in the npx cache (for example the copy the Playwright MCP server uses). If neither has one, add Playwright to the project, or point at an installed copy with `--playwright <path>`.
 
 **Interactive:** use whatever browser automation the environment has (Playwright MCP, Chrome DevTools MCP). It suits poking at interactions. If there's none, ask the user to open the page and report what they see.
 
@@ -44,7 +47,7 @@ It writes phone (and, with `--desktop`, 1440×900) screenshots plus `qa-report.j
    - `failedScenes` must be empty.
 4. **Check boot timing.** `snap.mjs` reports `gateReadyMs`, and `card.state().boot` breaks it into phases (module download, audio, fonts, each scene's init).
    - Budget: about 5 s or less on a cold-cache desktop, and the envelope is visible immediately.
-   - If one scene's `init` dominates, defer the heavy parts. Don't await `stage.prime()`, and lazy-load textures for scenes that start late.
+   - If one scene's `init` dominates, defer the heavy parts. Don't await `stage.prime()`, and lazy-load textures for scenes that start late. More in `performance.md`.
 
 ## Screenshot every moment
 
@@ -99,6 +102,60 @@ Look at each screenshot as the recipient would:
   - `?quality=low`: still works
   - `?silent`: the visuals don't depend on audio
 
+## Phones and browsers
+
+Most people open the link on a phone: Safari on an iPhone, or Chrome (or Samsung Internet, Brave…) on Android, often not the newest. Every browser on an iPhone uses Safari's engine, and so do the in-app browsers of WhatsApp, Instagram and the like. So run `snap.mjs` as an iPhone too, upright and sideways:
+
+```bash
+node <skill>/scripts/snap.mjs http://localhost:8765/ --out <card>/qa/iphone --webkit --notch --tap --times gate,start,…,end
+node <skill>/scripts/snap.mjs http://localhost:8765/ --out <card>/qa/iphone-side --webkit --notch --landscape --times gate,…,end
+```
+
+- `--webkit` uses Playwright's WebKit build (Safari's engine) at Safari's real visible size, once its bars take their share: 390×664 upright, 844×342 sideways.
+- `--notch` draws the notch, the rounded corners and the home bar on the shots, and lists any text or button under them as `unsafe` in `qa-report.json`. Fix every one.
+  - Sideways is what Safari really shows: the page runs under the notch's side.
+  - Upright is the worst case: the page full screen behind the notch and the home bar, as when it's saved to the home screen.
+  - It simulates the notch through the `--safe-t`, `--safe-r`, `--safe-b` and `--safe-l` CSS variables, so position things with those, never with `env()` directly.
+
+### iPhone
+
+- **Sound starts only inside a tap.** Call `play()` in the tap's handler itself, not after an `await` or in a `.then()`. That goes for the song and for any video with sound. After that, the same element can play again from code.
+- **No full screen for pages, and no orientation lock.** Only a `<video>` can go full screen, in Apple's own player. Design around Safari's bars; to show something sideways, turn it with CSS while the phone is upright.
+- **The visible area changes size** as the bars grow and shrink: `vh` is the largest size, `dvh` the current one. Layouts measured in JavaScript must measure again on `resize`, and ease to the new place rather than jump.
+- **Volume is read-only:** mute with `muted`, not `volume` (the runtime does).
+- **The silent switch:** `<audio>` and `<video>` play through it. Web Audio needs `navigator.audioSession.type = 'playback'`, which the runtime sets.
+- **Low Power Mode:** 30 frames a second, and no autoplay, even muted. Give videos a poster and a play button.
+- **Hosts without range requests.** Cloudflare Pages answers them with the whole file, and Safari can't seek in a file streamed from such a host, so replaying a streamed song freezes. The runtime plays the song from memory and holds the gate until it's loaded. For long video, use HLS (separate chunk files), not one big MP4.
+- **Older iOS.** A phone a few years old may not be updated. The template needs iOS 15 (WebGL 2). Newer features need a fallback or a check:
+
+  | Feature | Safari / iOS |
+  |---|---|
+  | `aspect-ratio`, WebGL 2 | 15 |
+  | `dvh`/`svh`, `:has()`, `<dialog>` | 15.4 |
+  | container queries, `cqw`/`cqh` units | 16 |
+  | `color-mix()` | 16.2 (the template gives a plain colour first) |
+  | import maps, `navigator.audioSession` | 16.4 (the template adds an import-map fallback; the runtime checks for the session) |
+  | CSS nesting | 16.5 |
+  | `backdrop-filter` without the `-webkit-` prefix | 18 (write both) |
+
+- **Old Safari quirks.** The template handles these; keep them when you restyle.
+  - A `<button>`'s contents may not centre with grid or flex. Centre icons by position, and draw them as SVG rather than characters such as ✕, whose position depends on the font.
+  - `-webkit-` prefixes are still needed for `backdrop-filter`, `mask` and `backface-visibility` on older versions, and for `text-size-adjust`, `touch-callout` and `user-select`.
+  - A quick second tap zooms the page and a long press opens a menu, unless `touch-action: manipulation` and `-webkit-touch-callout: none` are set.
+  - Text grows when the phone turns, unless `-webkit-text-size-adjust: 100%` is set.
+  - Hover styles stay on after a tap on a touch screen: put them in `@media (hover: hover)`.
+
+### Android
+
+- A page can go full screen and lock to landscape after a tap. The page changes size when it does, and when the address bar slides away: layouts must follow smoothly.
+- Chrome's own HLS player picks a copy by the player's size, often 360p on a phone: play HLS with hls.js.
+- After a tap on the site, video may play with sound.
+
+### Hosts
+
+- **Cloudflare Pages:** no range requests (the deploy's audio check shows 200, which the in-memory song handles) and files up to 25 MB.
+- After publishing, open the live link on a phone: the link preview, the tap, the sound, and a replay.
+
 ## Numeric checks
 
 Some problems are easier to catch with a quick evaluation than by eye.
@@ -138,6 +195,8 @@ This catches template names left behind. Also check `index.html` `<title>`/`og:*
 - [ ] No console errors; `failedScenes` empty; no 404s
 - [ ] Gate → audio plays on the first tap; mute works; the "Tap for sound" fallback appears when blocked
 - [ ] Every scene looks right at 390×844 and 1440×900 (snapshots reviewed)
+- [ ] Checked as an iPhone (`--webkit --notch`, upright and sideways): no `unsafe` items, sound starts on the tap, a replay works
+- [ ] Performance: the checklist in `performance.md`
 - [ ] Big moments land on the music; the letter has reading time; the end screen stays
 - [ ] Interactions work by tap; mic/motion features have fallbacks and deadlines
 - [ ] No 3D interpenetration (numeric check for anything moving)

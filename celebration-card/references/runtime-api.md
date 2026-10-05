@@ -58,7 +58,7 @@ Audio resolution:
 - `src` is HEAD-checked. If the file is missing, the card runs **silently on `plan`**; this is the Suno "build before the song exists" mode. If the file is present, `analysis` JSON supplies beats, sections and bands. Without analysis, the card falls back to `plan` timing (with a console warning).
 - If playback is blocked (no gesture, `?t=` QA mode), the card keeps running on a silent clock and shows a "🔊 Tap for sound" pill. Tapping it restores audio at the current position.
 
-File audio plays through a plain `<audio>` element (robust on iOS, no CORS issues). Songs up to 15 MB are also downloaded into memory while the gate shows (`preload: 'auto'`). Seeking then works on any host, even one without HTTP Range support, and playback never stalls mid-song. If the viewer taps first, the card streams. Audio-reactive levels come from the analysis JSON's pre-computed bands, so they're deterministic. Synthesized songs use a live analyser.
+File audio plays through a plain `<audio>` element (robust on iOS, no CORS issues). Songs up to 15 MB are downloaded into memory while the gate shows (`preload: 'auto'`), and the gate waits for that copy (within `gateMaxWaitMs`). Seeking then works on any host, even one without HTTP Range support, and playback never stalls mid-song. If the viewer still taps first (a very slow connection), the song streams, and the copy takes over at the next seek, so a replay works on Safari too: Safari can't seek in a file streamed from a host that ignores range requests. Audio-reactive levels come from the analysis JSON's pre-computed bands, so they're deterministic. Synthesized songs use a live analyser.
 
 ## Timing & time expressions
 
