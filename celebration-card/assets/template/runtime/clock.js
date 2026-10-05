@@ -69,6 +69,17 @@ export class FileClock {
     this._ct = 0; this._ctAt = 0; this._t = 0; this._at = 0;
     this.missing = false;
     this.inMemory = false;
+    // iOS Safari can report the song as ended in the middle of it: after it has played to the end, a seek back that
+    // lands after play() leaves it "ended" where the seek put it. play() therefore waits for a pending seek to land
+    // (see seek), and a stale end like that is played through once more.
+    el.addEventListener('ended', () => {
+      const d = this.duration;
+      if (!this._wantPlay || this._staleRetry || !(Number.isFinite(d) && el.currentTime < d - 0.5)) return;
+      this._staleRetry = true;
+      const t = el.currentTime;
+      this.seek(t);
+      this._seekDone.then(() => el.play()).catch(() => {});
+    });
     /** Resolves true once the song is in memory, false if it will stream instead. */
     this.inMemoryReady = new Promise((resolve) => { this._inMemoryDone = resolve; });
   }
@@ -135,19 +146,33 @@ export class FileClock {
   }
 
   play() {
-    this._started = true;
+    this._started = true; this._wantPlay = true; this._staleRetry = false;
     if (!this.inMemory) this._stream();
     this._resetSmoothing();
-    return this.el.play();
+    const seek = this._seekDone; this._seekDone = null;
+    if (!seek) return this.el.play();
+    // a seek is under way: play once it has landed (the element was unlocked by the first tap, so this may run later)
+    return seek.then(() => { this._resetSmoothing(); return this.el.play(); });
   }
-  pause() { this.el.pause(); }
+  pause() { this._wantPlay = false; this.el.pause(); }
   seek(t) {
     const d = this.duration;
     // streamed so far, with the copy now here and the song stopped (a replay): seek in the copy, not the URL
-    if (this._lateCopy && (this.el.paused || this.el.ended)) { const url = this._lateCopy; this._lateCopy = null; this._useCopy(url, clamp(t, 0, Number.isFinite(d) ? Math.max(0, d - 0.01) : t)); this._resetSmoothing(); return; }
+    if (this._lateCopy && (this.el.paused || this.el.ended)) {
+      const url = this._lateCopy; this._lateCopy = null;
+      this._seekDone = new Promise((resolve) => { this.el.addEventListener('seeked', resolve, { once: true }); setTimeout(resolve, 1500); });   // play once the copy is there
+      this._useCopy(url, clamp(t, 0, Number.isFinite(d) ? Math.max(0, d - 0.01) : t)); this._resetSmoothing(); return;
+    }
     if (!this.el.getAttribute('src')) this._pendingT = t;   // no source yet: applied when it arrives
     if (this._swapping != null) this._swapping = t;
-    this.el.currentTime = clamp(t, 0, Number.isFinite(d) ? Math.max(0, d - 0.01) : t);
+    // resolves when this seek has landed ('seeked'), or after 800 ms if the element never says so (no source yet)
+    const el = this.el;
+    this._seekDone = new Promise((resolve) => {
+      const done = () => { clearTimeout(timer); el.removeEventListener('seeked', done); resolve(); };
+      const timer = setTimeout(done, 800);
+      el.addEventListener('seeked', done);
+    });
+    el.currentTime = clamp(t, 0, Number.isFinite(d) ? Math.max(0, d - 0.01) : t);
     this._resetSmoothing();
   }
   _resetSmoothing() { const now = performance.now(); this._ct = this._t = this.el.currentTime; this._ctAt = this._at = now; }

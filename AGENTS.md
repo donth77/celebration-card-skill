@@ -115,6 +115,10 @@ failed scenes and, with `--notch`, no `unsafe` items. `snap.mjs` needs the `play
 finds a copy in the project or the npx cache, or takes `--playwright <path>`. For `--webkit` it needs
 a Playwright WebKit build; if the one that copy expects is missing, it uses the newest one installed.
 
+iOS Safari's own media stack differs from Playwright's WebKit: replays froze on an iPhone 13 and on the iOS
+Simulator while desktop WebKit played them fine. With Xcode installed, drive the Simulator's Safari with
+`safaridriver` (see `references/qa.md` → iOS Safari itself).
+
 `deploy.py --yes` publishes for real. It has been run end to end on Cloudflare Pages (2026-10-05):
 Cloudflare answers range requests with 200, which the runtime's in-memory song handles. Run it only
 with the owner's go-ahead, then check the live link, the preview image and audio seeking.

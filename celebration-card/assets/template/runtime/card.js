@@ -382,7 +382,8 @@ export async function createCard(config = {}) {
 
     for (const { sys } of systemList) { try { sys.update(ctx); } catch (err) { errors.push(String(err.message)); console.error(err); } }
 
-    if (started && !ended && !frozen && (t >= timing.duration - 0.02 || (active === audioClock && audioClock?.ended))) end();
+    // the element's own "ended" counts only near the end: iOS Safari can report it mid-song after a seek (FileClock)
+    if (started && !ended && !frozen && (t >= timing.duration - 0.02 || (active === audioClock && audioClock?.ended && t >= timing.duration - 1))) end();
 
     // Performance watchdog: step quality down if we're consistently slow.
     fpsAcc += dt; fpsFrames++;

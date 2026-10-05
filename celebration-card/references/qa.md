@@ -122,6 +122,7 @@ node <skill>/scripts/snap.mjs http://localhost:8765/ --out <card>/qa/iphone-side
 - **Sound starts only inside a tap.** Call `play()` in the tap's handler itself, not after an `await` or in a `.then()`. That goes for the song and for any video with sound. After that, the same element can play again from code.
 - **No full screen for pages, and no orientation lock.** Only a `<video>` can go full screen, in Apple's own player. Design around Safari's bars; to show something sideways, turn it with CSS while the phone is upright.
 - **The visible area changes size** as the bars grow and shrink: `vh` is the largest size, `dvh` the current one. Layouts measured in JavaScript must measure again on `resize`, and ease to the new place rather than jump.
+- **Replays:** after a song has played to its end, iOS can finish a seek back *after* a `play()` called with it, and then reports the song as ended where the seek put it: the card freezes, silent. The runtime starts playing only once a seek has landed and ignores an "ended" that isn't near the end. Test replays several times in a row.
 - **Volume is read-only:** mute with `muted`, not `volume` (the runtime does).
 - **The silent switch:** `<audio>` and `<video>` play through it. Web Audio needs `navigator.audioSession.type = 'playback'`, which the runtime sets.
 - **Low Power Mode:** 30 frames a second, and no autoplay, even muted. Give videos a poster and a play button.
@@ -154,7 +155,11 @@ node <skill>/scripts/snap.mjs http://localhost:8765/ --out <card>/qa/iphone-side
 ### Hosts
 
 - **Cloudflare Pages:** no range requests (the deploy's audio check shows 200, which the in-memory song handles) and files up to 25 MB.
-- After publishing, open the live link on a phone: the link preview, the tap, the sound, and a replay.
+- After publishing, open the live link on a phone: the link preview, the tap, the sound, and a few replays.
+
+### iOS Safari itself
+
+Playwright's WebKit is Safari's engine built for the Mac; it doesn't have the iPhone's media stack. If Xcode is installed, its iPhone Simulator runs the real iOS Safari, and `safaridriver` (part of macOS) drives it over WebDriver: start a session with `platformName: "iOS"` and `"safari:useSimulator": true`. Its synthetic taps don't produce a `click`, so also set `"webkit:alwaysAllowAutoplay": true` and click from a script (`element.click()`) to get past the gate.
 
 ## Numeric checks
 
@@ -195,7 +200,7 @@ This catches template names left behind. Also check `index.html` `<title>`/`og:*
 - [ ] No console errors; `failedScenes` empty; no 404s
 - [ ] Gate → audio plays on the first tap; mute works; the "Tap for sound" fallback appears when blocked
 - [ ] Every scene looks right at 390×844 and 1440×900 (snapshots reviewed)
-- [ ] Checked as an iPhone (`--webkit --notch`, upright and sideways): no `unsafe` items, sound starts on the tap, a replay works
+- [ ] Checked as an iPhone (`--webkit --notch`, upright and sideways): no `unsafe` items, sound starts on the tap, replays work (try three in a row)
 - [ ] Performance: the checklist in `performance.md`
 - [ ] Big moments land on the music; the letter has reading time; the end screen stays
 - [ ] Interactions work by tap; mic/motion features have fallbacks and deadlines

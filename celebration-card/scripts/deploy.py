@@ -242,11 +242,18 @@ def verify(url, staged):
     audio = next((p for p in (staged / "assets" / "audio").glob("*.mp3")), None) if (staged / "assets" / "audio").exists() else None
     if audio:
         rel = audio.relative_to(staged).as_posix()
-        code = http(url + rel, "GET", {"Range": "bytes=0-1"})[0]
-        checks["audio seeking"] = (
-            "206: the host supports range requests" if code == 206 else
-            "200: the host ignores range requests (Cloudflare Pages); fine, the card plays songs up to 15 MB from memory" if code == 200 else code)
+        checks["audio seeking"] = http(url + rel, "GET", {"Range": "bytes=0-1"})[0]
     return checks
+
+
+def notes_for(checks):
+    """Plain-language notes on the checks that need one."""
+    notes = {}
+    if checks.get("audio seeking") == 206:
+        notes["audio seeking"] = "206: the host supports range requests"
+    elif checks.get("audio seeking") == 200:
+        notes["audio seeking"] = "200: the host ignores range requests (Cloudflare Pages); fine, the card plays songs up to 15 MB from memory"
+    return notes
 
 
 def main():
@@ -322,8 +329,8 @@ def publish(args, card, cfg, cfg_path, platform, name, team, spec, expected, tmp
     record = {"platform": platform, "name": name, "team": team, "url": url, "deployedAt": datetime.now().isoformat(timespec="seconds"),
               "checks": checks, "info": info, "history": (cfg.get("history", []) + [{"url": url, "at": datetime.now().isoformat(timespec="seconds")}])[-10:]}
     cfg_path.write_text(json.dumps(record, indent=2))
-    print(json.dumps({"published": url, "checks": checks, "info": info or None, "recorded": str(cfg_path)}, indent=2, ensure_ascii=False))
-    bad = {k: v for k, v in checks.items() if not (200 <= v < 300)}
+    print(json.dumps({"published": url, "checks": checks, "notes": notes_for(checks) or None, "info": info or None, "recorded": str(cfg_path)}, indent=2, ensure_ascii=False))
+    bad = {k: v for k, v in checks.items() if not (isinstance(v, int) and 200 <= v < 300)}
     if bad:
         print(f"\nWarning: some checks didn't pass yet (CDN propagation can take a minute): {bad}")
     print(f"\nShare it: \"Made you something 🎉 Open it with sound on: {url}\"\nQR code for a paper card: npx --yes qrcode -o qr.png \"{url}\"")
